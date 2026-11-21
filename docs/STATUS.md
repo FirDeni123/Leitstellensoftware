@@ -1,13 +1,45 @@
 # Projektstatus
 
-**Stand:** 21.11.2026 · **Version:** 0.4.0 · **Aktuelle Phase:** 4 abgeschlossen, nächste: Phase 5 (Einsatzmittelvorschlag)
+**Stand:** 21.11.2026 · **Version:** 0.5.0 · **Aktuelle Phase:** 5 abgeschlossen, nächste: Phase 6 (Fahrzeuge, Karte, Navigation)
 
-**Testergebnis zuletzt:** Server 105/105 ✅ · Client-Unit 35/35 ✅ · E2E 9/9 ✅ (dreimal in Folge) ·
+**Testergebnis zuletzt:** Server 122/122 ✅ · Client-Unit 40/40 ✅ · E2E 11/11 ✅ (dreimal in Folge) ·
 Ruff ✅ · TypeScript ✅ · `alembic check` ✅
 
-**Repository:** https://github.com/FirDeni123/Leitstellensoftware (Branch `main`).
+**Repository:** https://github.com/FirDeni123/Leitstellensoftware (Branch `main`). Phase 5 liegt
+als lokaler Commit vor und wird vom Projektinhaber hochgeladen.
 
-## Phase 4 – Alarmierung (umgesetzt und getestet)
+## Phase 5 – Einsatzmittelvorschlag (umgesetzt und getestet)
+
+| Bereich | Inhalt | Nachweis |
+|---|---|---|
+| Datenmodell | Migration `0005`: `proposal_settings` (je Leitstelle, versioniert), `proposals` (Eingaben, Ergebnis, Dauer, Übernahme); Recht `proposal_settings.write` (Leitung, Administration) | Migration up/down/up, `alembic check` |
+| Bedarf | AAO der Leitstelle bzw. des Bereichs bis zur gewählten Stufe, Zusatzbedarf je Fahrzeugtyp; Fahrzeuge im Einsatz decken zuerst | `test_units_in_incident_cover_demand_first`, `test_accept_assigns_only_…` |
+| Fahrzeit | Schätzung (Luftlinie × Umwegfaktor, Typgeschwindigkeit × Sonderrechtsfaktor) oder OSRM-`table` mit gekennzeichnetem Rückfall; Startpunkt Fahrzeugposition oder Wache | `test_estimate_and_formatting`, `test_routing_service_is_used_and_failure_falls_back` |
+| Bewertung | gewichtete Fahrzeit = Fahrzeit + Ausrückzeit (Status 2) + Malus Ersatztyp − Bonus Wache laut AAO; maximale Fahrzeit; alles je Leitstelle einstellbar | `test_turnout_time_and_preferred_station_…`, `test_settings_permissions_versioning_and_effect` |
+| Zuteilung | Greedy nach Bewertung, Ausgleichsschritt (kein unnötig offener Bedarf), bei Gleichstand passender Typ vor Ersatztyp | `test_balancing_keeps_all_demands_covered`, `test_equal_scores_prefer_matching_type_…` |
+| Begründungen | je Fahrzeug lesbar (AAO-Position, Ersatz mit Malus, Status, Fahrzeit mit Quelle, Wachenbonus), Alternativen je Bedarf, Fehlbedarf mit Hinweis auf freie Fahrzeuge verknüpfter Nachbarleitstellen | `test_m5_b2_…`, `test_extra_demand_shortfall_and_neighbour_hint` |
+| Bedienung | Fenster „Vorschlag …“ im Einsatz: Stufe wählen, Alternativen tauschen, abwählen, Zusatzbedarf, manuell ergänzen, neu berechnen, „Übernehmen“ (nur Zuordnung) oder „Übernehmen und alarmieren …“ (öffnet die Alarmierungsvorschau); Fenster „Vorschlagsregeln“ | E2E `phase5.spec.ts` |
+| Alarmierungsvorschau | nutzt dieselbe Engine – Fahrzeiten und Begründungen im Alarmierungsdialog | `test_m4_preview_…` (angepasst) |
+
+**Meilenstein M5 erreicht:** Für B2 entsteht in unter 1 s (gemessen 23–418 ms, Mittel 93 ms;
+auch mit 300 zusätzlichen Fahrzeugen unter 1 s) ein Vorschlag mit nachvollziehbarer
+Begründung je Fahrzeug. Weder Berechnung noch Übernahme alarmieren – das ist getestet
+(keine `alarms`-Zeile, `alarmed_at` leer) und im Einsatzverlauf dokumentiert.
+
+## Bei der Umsetzung von Phase 5 gefundene und behobene Fehler
+
+- **Ersatztypen über Kreuz:** Bei gleicher Bewertung konnte die Zuteilung zwei Ersatztypen
+  vergeben, obwohl passende Fahrzeuge frei waren. Jetzt gewinnt bei Gleichstand der passende
+  Typ (Test).
+- **Ungenaue Dokumentation der Übernahme:** Eine gewählte Alternative erschien im
+  Einsatzverlauf als „manuell ergänzt“. Jetzt: „Alternative gewählt: …“.
+- **Aufblitzende Konfliktwarnung nach eigenem Speichern:** Das Echtzeit-Ereignis kann vor der
+  eigenen Serverantwort eintreffen. Die Warnung erscheint jetzt erst, wenn der Unterschied
+  länger als 0,8 s besteht (gilt für alle Bearbeitungsmasken).
+- **E2E-Selektoren:** Ein gespeichertes Layout mit dem neuen Fenster machte einen älteren
+  Test mehrdeutig; Selektoren sind jetzt auf das jeweilige Fenster begrenzt.
+
+## Phase 4 – Alarmierung (abgeschlossen, 0.4.0)
 
 | Bereich | Inhalt | Nachweis |
 |---|---|---|
@@ -56,7 +88,8 @@ Notrufe, Fahrzeugzuordnung und Statuswechsel mit den handelnden Personen
 
 | Punkt | Geplant in |
 |---|---|
-| Einsatzmittelvorschlag mit Fahrzeit (Routing), Bewertung und Begründung; bis dahin Vorschlag nach Luftlinie | Phase 5 |
+| OSRM-Dienst als Container bereitstellen (Anbindung ist fertig, aber nur gegen simulierten Endpunkt getestet) | Phase 6 |
+| Ausrückzeit je Wache (z. B. Freiwillige Feuerwehr), Sonderrechtsfaktor je Fahrzeugtyp/Straßenklasse | später (Erweiterung der Vorschlagsregeln) |
 | „Anfahrt“/„Am Einsatzort“ aus Fahrzeugstatus (S3/S4) | Phase 6 |
 | Funkalarmierung (POCSAG/TETRA) – RICs werden im Echtbetrieb nur protokolliert („nicht zugestellt“) | späteres Plugin |
 | Anbindung einer konkreten Feuerwehrsoftware (z. B. Feuersoftware Connect) | späteres Plugin, nach Schnittstellendoku und Testzugang |
@@ -65,22 +98,24 @@ Notrufe, Fahrzeugzuordnung und Statuswechsel mit den handelnden Personen
 | Klingelnde Notrufe ohne Annahme nach Zeit als „verpasst“ markieren | Phase 7 (mit Telefonie) |
 | Pop-out-Fenster für Mehrmonitorbetrieb | Phase 8 |
 | Allowlist für Webhook-Ziele, IP-basierte Ratenbegrenzung, Zertifikats-Pinning, Code-Signing, Auto-Update | Phase 8 |
-| Rollen-Editor nutzt noch nicht den gemeinsamen Bearbeitungsschutz | Phase 5 |
+| Rollen-Editor nutzt noch nicht den gemeinsamen Bearbeitungsschutz | Phase 6 |
 
 ## In dieser Umgebung nicht verifizierbar (unverändert)
 
 - Docker-Compose-Gesamtstack und Installationsskript, Windows-Installer (CI-Job), native
   Fensterleiste unter Windows.
 
-## Nächster konkreter Schritt (Phase 5 – Einsatzmittelvorschlag)
+## Nächster konkreter Schritt (Phase 6 – Fahrzeuge, Karte, Navigation)
 
-1. Bewertungsmodell je Fahrzeug: AAO-Bedarf, Typ/Fähigkeiten, Status, Verfügbarkeit,
-   Entfernung bzw. Fahrzeit; administrierbare Gewichtung (`proposal_settings`).
-2. Fahrzeitschätzung zunächst über Luftlinie × Umwegfaktor und Fahrzeuggeschwindigkeit;
-   OSRM-Anbindung vorbereitet (Phase 6).
-3. Begründung je Vorschlag („HLF20 erfüllt AAO B2, 4,2 km, ca. 6 min“), Alternativen,
-   Übernehmen/Abwählen/Ergänzen/Neu berechnen – integriert in den Alarmierungsdialog.
-4. Abnahme M5: Vorschlag für B2 in unter 1 s, keine automatische Alarmierung.
+1. Statussystem im Betrieb: Statuswechsel je Fahrzeug (Disponent, Simulation), Statushistorie
+   (`vehicle_status_history`), Sprechwünsche (Status 0/5) mit Annehmen/Zurückstellen.
+2. Simulationsdienst: Alarmierung → Status 3 → Fahrt entlang der Route → Ankunft Status 4,
+   Positionen gebündelt im 1-Hz-Takt an alle Clients; Einsatzstatus „Anfahrt“/„Am Einsatzort“
+   automatisch.
+3. Karte (MapLibre) mit Wachen, Fahrzeugen, Einsatzorten; Einsatzort per Klick wählen.
+4. OSRM-Container in Docker Compose (Region aus OSM-Extrakt) – damit nutzt der
+   Einsatzmittelvorschlag automatisch echte Straßenfahrzeiten.
+5. Abnahme M6: 50 Fahrzeuge fahren gleichzeitig, alle Clients sehen identische Positionen.
 
 ## Annahmen und Entscheidungen
 

@@ -1,8 +1,9 @@
 # 06 – Simulationskonzept und die drei Kernfunktionen
 
 Dieses Dokument plant die drei zusätzlichen Kernfunktionen (Einsatzmittelvorschlag,
-KI-Anrufsimulation, Navigation/GPS-Simulation) sowie Telefonie und Sprache. Alles hier ist
-**noch nicht implementiert** (Phasen 5–7). Die Architektur aus Phase 1 (Event-Bus,
+KI-Anrufsimulation, Navigation/GPS-Simulation) sowie Telefonie und Sprache. Der
+**Einsatzmittelvorschlag ist seit 0.5.0 umgesetzt** (Abschnitt 3, mit Umsetzungsstand);
+alles Weitere ist noch nicht implementiert (Phasen 6–7). Die Architektur aus Phase 1 (Event-Bus,
 Unit of Work, Provider-Interfaces, Modul-Registry) ist darauf ausgelegt.
 
 ## 1. Simulationsgrundsätze
@@ -115,6 +116,28 @@ alarmiert. Der Vorschlag wird mit Eingaben und Ergebnis gespeichert (`proposals`
 **Erweiterbarkeit:** Bewertungskriterien sind `ProposalStrategy`-Komponenten. Neue
 Kriterien (z. B. Besatzungsstärke, Sonderfähigkeiten) kommen hinzu, ohne den Ablauf zu
 ändern.
+
+### Umsetzungsstand (0.5.0)
+
+- **Umgesetzt wie oben:** Bedarf aus AAO (Stufen ≤ gewählte Stufe) plus Zusatzbedarf;
+  Fahrzeuge im Einsatz decken zuerst (passender Typ vor Ersatztyp); Kandidatenfilter
+  (verfügbar, Status zählt als frei, ungebunden, alarmierbare Organisation, aktive Wache);
+  Vorfilter nach Luftlinie (n × Bedarf); Fahrzeit über OSRM `table` (falls `ILS_OSRM_URL`
+  gesetzt und je Leitstelle aktiviert) mit gekennzeichnetem Rückfall auf die Schätzung;
+  Bewertung in Sekunden („gewichtete Fahrzeit“); Greedy-Zuteilung mit Ausgleichsschritt;
+  lesbare Begründungen, Alternativen, Fehlbedarf mit Hinweis auf verknüpfte
+  Nachbarleitstellen und deren freie Fahrzeuge; Speicherung in `proposals`; Übernahme ordnet
+  nur zu.
+- **Vereinfachungen:** Ein globaler Sonderrechtsfaktor (statt je Fahrzeugtyp und
+  Straßenklasse); Ausrückzeit einheitlich je Leitstelle (noch nicht je Wache, z. B.
+  Freiwillige Feuerwehr); „Ausrückebereich“ = Wachen-Einträge der AAO; Kriterien sind
+  Funktionen der Engine (`app/proposal/engine.py`), noch keine austauschbaren
+  `ProposalStrategy`-Komponenten.
+- **Nicht in dieser Umgebung getestet:** ein echter OSRM-Dienst (die Anbindung ist gegen
+  einen simulierten Endpunkt getestet; der OSRM-Container folgt mit Phase 6).
+- **Messwert M5:** 22 Vorschläge auf den Demo-Daten: 23–418 ms, im Mittel 93 ms
+  (Entwicklungsumgebung, Schätzung ohne OSRM). Mit 300 zusätzlichen Fahrzeugen bleibt die
+  Berechnung unter 1 s (automatischer Test).
 
 ## 4. KI-gestützte Anrufsimulation (Phase 7)
 

@@ -67,13 +67,13 @@ test('concurrent edit: unsaved input is kept, the save is rejected as conflict, 
   const crew = String((currentCrew % 9) + 1);
   await b.getByLabel('Beschreibung').fill(`Eingabe aus Sitzung B ${RUN}`); // B starts typing …
   await a.getByLabel('Besatzung').fill(crew); // … while A saves another change
-  await a.getByRole('button', { name: 'Speichern' }).click();
+  await a.getByRole('tabpanel', { name: 'Fahrzeugverwaltung' }).getByRole('button', { name: 'Speichern' }).click();
   await expect(a.getByText('Dieser Datensatz wurde zwischenzeitlich')).toHaveCount(0); // own save: no warning
 
   // B is warned live, keeps its input, and cannot silently overwrite A's change
   await expect(b.getByText('Dieser Datensatz wurde zwischenzeitlich von einer anderen Person geändert')).toBeVisible();
   await expect(b.getByLabel('Beschreibung')).toHaveValue(`Eingabe aus Sitzung B ${RUN}`);
-  await b.getByRole('button', { name: 'Speichern' }).click();
+  await b.getByRole('tabpanel', { name: 'Fahrzeugverwaltung' }).getByRole('button', { name: 'Speichern' }).click();
   await expect(b.getByText(/wurde zwischenzeitlich von einer anderen Person geändert. Bitte neu laden/)).toBeVisible();
   if (SHOTS) await b.screenshot({ path: `${SHOTS}/11-konflikt.png` });
   await b.getByRole('button', { name: 'Neu laden', exact: true }).click();

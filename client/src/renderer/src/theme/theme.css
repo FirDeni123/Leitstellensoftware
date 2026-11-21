@@ -288,3 +288,10 @@ table.data.compact td, table.data.compact th { padding-top: 2px; padding-bottom:
 .timeline-item.kind-police_notice span:nth-child(2), .timeline-item.kind-police_ack span:nth-child(2) { color: #b9d4ff; }
 .timeline-item.level-error span:nth-child(2) { color: #ff9ea2; }
 .timeline-item.level-warning span:nth-child(2) { color: #ffd291; }
+
+/* ---- Phase 5: Einsatzmittelvorschlag ---------------------------------------------------- */
+.proposal-row { display: flex; gap: 8px; align-items: flex-start; padding: 5px 0; border-bottom: 1px solid var(--line); }
+.proposal-row input[type='checkbox'] { margin-top: 4px; }
+.reasons { margin: 2px 0 0 0; padding-left: 16px; color: var(--text-2); font-size: var(--fs-xs); }
+.reasons li { margin: 1px 0; }
+.timeline-item.kind-proposal_accepted span:nth-child(2) { color: #b9e7c9; }

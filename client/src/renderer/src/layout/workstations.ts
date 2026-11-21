@@ -47,14 +47,14 @@ export const WORKSTATIONS: readonly Workstation[] = [
     key: 'management', title: 'Verwaltung', shortcut: 'F5', permission: 'control_centers.read',
     layout: { columns: [
       { groups: [['vehicle-admin', 'stations', 'rics', 'alarm-groups', 'radio-groups'], ['import']] },
-      { groups: [['alarm-rules', 'keywords', 'control-centers', 'areas', 'organizations', 'vehicle-types', 'status-definitions', 'interfaces'], ['audit-log', 'module-status', 'system-messages']] },
+      { groups: [['alarm-rules', 'proposal-settings', 'keywords', 'control-centers', 'areas', 'organizations', 'vehicle-types', 'status-definitions', 'interfaces'], ['audit-log', 'module-status', 'system-messages']] },
     ] },
   },
   {
     key: 'admin', title: 'Administrator', shortcut: 'F6', permission: 'system.admin',
     layout: { columns: [
       { groups: [['users', 'roles', 'login-log']] },
-      { groups: [['control-centers', 'areas', 'keywords', 'alarm-rules', 'organizations', 'vehicle-types', 'status-definitions', 'import']] },
+      { groups: [['control-centers', 'areas', 'keywords', 'alarm-rules', 'proposal-settings', 'organizations', 'vehicle-types', 'status-definitions', 'import']] },
       { groups: [['interfaces', 'audit-log'], ['module-status', 'system-messages']] },
     ] },
   },

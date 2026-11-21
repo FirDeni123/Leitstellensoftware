@@ -46,6 +46,8 @@ export const PANELS: readonly PanelDefinition[] = [
   { id: 'alarms', title: 'Alarmierungsübersicht', permission: 'incidents.read', phase: 4, implemented: true },
   { id: 'alarm-rules', title: 'Alarmierungsregeln (AAO)', permission: 'master_data.read', phase: 4, implemented: true },
   { id: 'interfaces', title: 'Schnittstellen', permission: 'interfaces.read', phase: 4, implemented: true },
+  // ---- implemented in phase 5 (Einsatzmittelvorschlag) -----------------------------------
+  { id: 'proposal-settings', title: 'Vorschlagsregeln', permission: 'master_data.read', phase: 5, implemented: true },
   // ---- planned modules (transparently marked) -------------------------------------------
   {
     id: 'talk-requests', title: 'Sprechwünsche', permission: 'radio.handle', phase: 6, implemented: false,

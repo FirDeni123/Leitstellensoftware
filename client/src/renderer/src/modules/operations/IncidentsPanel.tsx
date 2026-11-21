@@ -12,6 +12,7 @@ import { hasPermission, useSession } from '@/state/session';
 import { useActiveControlCenter } from '@/state/workContext';
 import { AlarmDialog } from '../alarming/AlarmDialog';
 import { AlarmProtocol } from '../alarming/AlarmProtocol';
+import { ProposalDialog } from '../proposal/ProposalDialog';
 import { usePoliceNoticeQueue } from '../alarming/policeNotices';
 import { ControlCenterBadge } from '../crud/CrudPanel';
 import { parseNumber } from '../crud/fields';
@@ -247,6 +248,7 @@ function VehiclesSection({ incident }: { incident: Incident }): ReactNode {
   const [selection, setSelection] = useState<string[]>([]);
   const [error, setError] = useState<unknown>(null);
   const [reassign, setReassign] = useState<{ ids: string[]; message: string } | null>(null);
+  const [proposing, setProposing] = useState(false);
   const canWrite = hasPermission(me, 'incidents.write') && !['finished', 'closed'].includes(incident.status);
   const activeAssignments = incident.assignments.filter((a) => a.released_at === null);
   const released = incident.assignments.filter((a) => a.released_at !== null);
@@ -289,7 +291,11 @@ function VehiclesSection({ incident }: { incident: Incident }): ReactNode {
 
   return (
     <>
-      <div className="section-title">Fahrzeuge ({activeAssignments.length}){incident.stations.length > 0 && <span className="muted"> · Wachen: {incident.stations.map((s) => s.name).join(', ')}</span>}</div>
+      <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span>Fahrzeuge ({activeAssignments.length}){incident.stations.length > 0 && <span className="muted"> · Wachen: {incident.stations.map((s) => s.name).join(', ')}</span>}</span>
+        {canWrite && <button className="btn sm" style={{ marginLeft: 'auto' }} onClick={() => setProposing(true)} title="Vorschlag nach AAO, Fahrzeit und Verfügbarkeit – ordnet erst nach Übernahme zu">Vorschlag …</button>}
+      </div>
+      {proposing && <ProposalDialog incident={incident} onClose={() => setProposing(false)} />}
       {activeAssignments.length === 0 && <div className="muted" style={{ fontSize: 'var(--fs-sm)' }}>noch keine Fahrzeuge zugeordnet</div>}
       {activeAssignments.map((a) => (
         <div key={a.id} className="assignment">

@@ -35,7 +35,7 @@ Fremdschlüssel**. Ein `ON DELETE SET NULL` wäre selbst eine Änderung am Proto
 das Löschen referenzierter Datensätze blockieren. Der Name des Handelnden wird deshalb
 zusätzlich als Text gespeichert.
 
-## 2. Tabellen je Phase (Phasen 2–4 umgesetzt, 5–7 geplant)
+## 2. Tabellen je Phase (Phasen 2–5 umgesetzt, 6–7 geplant)
 
 ### Phase 2 – Stammdaten (✅ umgesetzt, Migration `0002`)
 
@@ -102,12 +102,12 @@ Simulation das simulierte Gesprächsprotokoll (`sim_transcript`).
 Statusänderungen einer Schnittstelle (ok/Fehler) erhöhen die `version` nicht – sie würden
 sonst Bearbeitungskonflikte bei Administratoren auslösen.
 
-### Phase 5 – Einsatzmittelvorschlag
+### Phase 5 – Einsatzmittelvorschlag (umgesetzt, Migration `0005`)
 
 | Tabelle | Zweck / Spalten |
 |---|---|
-| `proposal_settings` | Gewichtungen und Regeln je Leitstelle (JSONB, versioniert) |
-| `proposals` | Gespeicherte Vorschläge zur Nachvollziehbarkeit. `incident_id`, `computed_at`, `inputs` (JSONB), `result` (JSONB mit Begründungen), `accepted_vehicle_ids` |
+| `proposal_settings` | Regeln je Leitstelle (eindeutig je `control_center_id`): `settings` (JSONB, geprüft durch `ProposalSettingsData`: Umwegfaktor, Faktor Sonderrechte, Ausrückzeit Status 2, Malus Ersatztyp, Bonus Wache laut AAO, maximale Fahrzeit, Alternativen, Vorfilter, Routing an/aus, Ersatztypen je Fahrzeugtyp-Kürzel), `version`, `updated_by_name`. Ohne Zeile gelten die Standardwerte |
+| `proposals` | Gespeicherte Vorschläge: `incident_id`, `computed_at`, `computed_by(_name)`, `stage`, `duration_ms`, `inputs` (Stufe, Zusatzbedarf, Stichwort, Ort, Routing, Regeln zum Zeitpunkt), `result` (Bedarf, Vorschläge mit Begründungen, Alternativen, Fehlbedarf, Hinweise), `accepted_vehicle_ids`, `accepted_at`, `accepted_by_name` |
 
 ### Phase 6 – Fahrzeugstatus, Funk und Navigation
 

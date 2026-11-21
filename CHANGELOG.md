@@ -1,5 +1,30 @@
 # Änderungsprotokoll
 
+## 0.5.0 – 21.11.2026 – Phase 5: Einsatzmittelvorschlag
+
+### Hinzugefügt
+- Einsatzmittelvorschlag im Einsatz („Vorschlag …“): Bedarf aus der AAO (bis zur gewählten
+  Stufe) und Zusatzbedarf, Bewertung nach Fahrzeit, Ausrückzeit, Ersatztyp und Wache laut
+  AAO, Zuteilung ohne Doppelvergabe mit Ausgleich, Begründung je Fahrzeug, Alternativen,
+  Fehlbedarf mit Hinweis auf freie Fahrzeuge verknüpfter Nachbarleitstellen.
+- „Übernehmen“ ordnet nur zu (dokumentiert im Einsatzverlauf); „Übernehmen und alarmieren …“
+  öffnet anschließend die bestätigungspflichtige Alarmierungsvorschau.
+- Fahrzeiten: Schätzung (Luftlinie × Umwegfaktor) oder OSRM-Routing (`ILS_OSRM_URL`) mit
+  gekennzeichnetem Rückfall.
+- Fenster „Vorschlagsregeln“ je Leitstelle (Gewichte, maximale Fahrzeit, Ersatztypen);
+  Recht `proposal_settings.write`.
+- Gespeicherte Vorschläge zur Nachvollziehbarkeit (Eingaben, Ergebnis, Dauer, Übernahme).
+
+### Geändert
+- Die Alarmierungsvorschau nutzt die neue Engine und zeigt Fahrzeiten statt Entfernungen.
+- Konfliktwarnung beim gleichzeitigen Bearbeiten erscheint erst nach 0,8 s (kein Aufblitzen
+  nach dem eigenen Speichern).
+- Standardlayouts (Schema 6) mit dem Fenster „Vorschlagsregeln“.
+
+### Behoben (während der Entwicklung gefunden)
+- Bei gleicher Bewertung konnten Ersatztypen über Kreuz vergeben werden.
+- Gewählte Alternativen wurden im Einsatzverlauf als „manuell ergänzt“ dokumentiert.
+
 ## 0.4.0 – 21.11.2026 – Phase 4: Alarmierung
 
 ### Hinzugefügt

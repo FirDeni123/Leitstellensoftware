@@ -508,7 +508,7 @@ export interface AlarmPreview {
   mode: OperationMode;
   vehicles: {
     id: Uuid; call_sign: string; vehicle_type: string; station_id: Uuid; station: string; status_code: number;
-    distance_km: number | null; reason: string; assigned: boolean;
+    distance_km: number | null; travel_seconds: number | null; travel_source: TravelSource | null; reason: string; assigned: boolean;
   }[];
   stations: PreviewTarget[];
   rics: PreviewTarget[];
@@ -623,4 +623,85 @@ export interface InterfaceEventItem {
   level: 'info' | 'warning' | 'error';
   kind: string;
   message: string;
+}
+
+// ---------------------------------------------------------------------- Phase 5: proposal
+export type TravelSource = 'osrm' | 'estimate' | 'none';
+
+export interface ProposalPick {
+  demand_key: string;
+  vehicle_id: Uuid;
+  call_sign: string;
+  vehicle_type: string;
+  station_id: Uuid;
+  station: string;
+  status_code: number;
+  slot: number;
+  match: 'exact' | 'substitute' | 'vehicle' | 'covered';
+  score_seconds: number | null;
+  travel_seconds: number | null;
+  distance_m: number | null;
+  travel_source: TravelSource;
+  in_incident: boolean;
+  alarmed: boolean;
+  reasons: string[];
+}
+
+export interface ProposalOption {
+  vehicle_id: Uuid;
+  call_sign: string;
+  vehicle_type: string;
+  station: string;
+  status_code: number;
+  match: string;
+  score_seconds: number;
+  travel_seconds: number | null;
+  reason: string;
+}
+
+export interface Proposal {
+  id: Uuid;
+  incident_id: Uuid;
+  control_center_id: Uuid;
+  computed_at: string;
+  computed_by_name: string;
+  duration_ms: number;
+  rule: { id: Uuid; name: string | null; area: string | null } | null;
+  stage: number | null;
+  max_stage: number;
+  next_kind: 'initial' | 'follow_up';
+  travel_source: TravelSource | 'mixed';
+  demands: { key: string; label: string; source: string; count: number; stage: number | null; covered: number }[];
+  picks: ProposalPick[];
+  alternatives: Record<string, ProposalOption[]>;
+  shortfalls: { demand_key: string; label: string; missing: number; message: string }[];
+  warnings: string[];
+  candidates: number;
+  accepted_vehicle_ids: Uuid[] | null;
+  accepted_at: string | null;
+  accepted_by_name: string | null;
+}
+
+export interface ProposalSettingsData {
+  detour_factor: number;
+  emergency_speed_factor: number;
+  turnout_seconds_on_station: number;
+  substitute_penalty_seconds: number;
+  preferred_station_bonus_seconds: number;
+  max_travel_minutes: number;
+  alternatives: number;
+  candidates_per_demand: number;
+  use_routing: boolean;
+  substitutes: Record<string, string[]>;
+}
+
+export interface ProposalSettings {
+  control_center_id: Uuid;
+  settings: ProposalSettingsData;
+  defaults: ProposalSettingsData;
+  is_default: boolean;
+  version: number | null;
+  updated_at: string | null;
+  updated_by_name: string | null;
+  routing_configured: boolean;
 }

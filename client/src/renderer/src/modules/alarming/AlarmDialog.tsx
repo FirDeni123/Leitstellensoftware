@@ -12,6 +12,7 @@ import { ErrorAlert, Field, Modal } from '@/components/common';
 import { MultiSelect } from '@/components/MultiSelect';
 import { sysmsg } from '@/state/messages';
 import { useSession } from '@/state/session';
+import { fmtDuration } from '../proposal/labels';
 import { EFFECT, hasTargets, newIdempotencyKey, toggle } from './labels';
 import { usePoliceNoticeQueue } from './policeNotices';
 
@@ -136,7 +137,9 @@ export function AlarmDialog({ incident, onClose }: { incident: Incident; onClose
                   <td style={{ fontWeight: 600 }}>{v.call_sign}</td>
                   <td><span className="badge mono">{v.vehicle_type}</span></td>
                   <td className="muted">{v.station}</td>
-                  <td className="tabular muted">{v.distance_km !== null ? `${v.distance_km.toFixed(1)} km` : ''}</td>
+                  <td className="tabular muted" title={v.travel_source === 'osrm' ? 'Fahrzeit laut Route' : 'Fahrzeit geschätzt'}>
+                    {v.travel_seconds !== null ? `${fmtDuration(v.travel_seconds)}${v.travel_source === 'estimate' ? ' (gesch.)' : ''}` : v.distance_km !== null ? `${v.distance_km.toFixed(1)} km` : ''}
+                  </td>
                   <td className="muted">{v.reason}</td>
                 </tr>
               ))}

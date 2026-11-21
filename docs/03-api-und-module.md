@@ -122,11 +122,22 @@ sonst die der Wache; dazu RICs von Wachen, RIC- und Gruppen-Einträgen. Schnitts
 systemweite und Leitstellen-Schnittstellen bei jeder Alarmierung, Wachen-Schnittstellen bei
 Beteiligung der Wache (erhalten nur die eigenen Fahrzeuge), dazu AAO-Einträge.
 
+### Phase 5 – Einsatzmittelvorschlag (umgesetzt)
+
+| Methode | Pfad | Recht | Zweck |
+|---|---|---|---|
+| POST | `/incidents/{id}/proposal` | `incidents.write` | Vorschlag berechnen und speichern (`stage`, `extra` = Zusatzbedarf). **Ordnet nicht zu, alarmiert nicht** |
+| GET | `/incidents/{id}/proposals` · `/proposals/{id}` | `incidents.read` | gespeicherte Vorschläge |
+| POST | `/proposals/{id}/accept` | `incidents.write` | übernehmen = Fahrzeuge zuordnen (`vehicle_ids`, optional `reassign`); Einsatzverlauf nennt Übernommenes, Abgewähltes, gewählte Alternativen und manuelle Ergänzungen. Keine Alarmierung |
+| GET/PUT | `/proposal-settings?control_center_id=` | lesen `master_data.read`, ändern `proposal_settings.write` | Regeln je Leitstelle, Optimistic Locking (`expected_version`, leer beim ersten Speichern) |
+
+Die Alarmierungsvorschau (`/incidents/{id}/alarm-preview`) verwendet dieselbe Engine, damit
+Vorschlag und Alarmierungsdialog identische Fahrzeuge und Begründungen zeigen.
+
 ### Geplant
 
 | Phase | Ressourcen |
 |---|---|
-| 5 | `/incidents/{id}/proposal` (berechnen, mit Begründungen), `/proposal-settings` |
 | 6 | `/vehicles/{id}/status`, `/talk-requests` (annehmen, zurückstellen, ablehnen), `/simulation/vehicles/{id}/move`, `/simulation/control` (Ausfall, Pause), `/routing/route` |
 | 7 | `/training/scenarios`, `/training/sessions` (Start, Ende, Beobachtung), `/training/sessions/{id}/evaluation`, Audio-WebSocket `/training/sessions/{id}/audio` |
 

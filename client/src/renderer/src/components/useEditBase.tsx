@@ -23,6 +23,8 @@ export interface EditBase<T, F> {
   rebase: (saved: T) => void;
 }
 
+export const STALE_NOTICE_DELAY_MS = 800;
+
 export function useEditBase<T, F>(item: T | undefined, toForm: (record: T | undefined) => F,
   version: (record: T) => number | undefined): EditBase<T, F> {
   const [base, setBase] = useState<T | undefined>(item);
@@ -30,6 +32,17 @@ export function useEditBase<T, F>(item: T | undefined, toForm: (record: T | unde
   const [form, setForm] = useState<F>(initial);
   const dirty = JSON.stringify(form) !== JSON.stringify(initial);
   const stale = !!item && !!base && version(item) !== version(base);
+  // Own saves: the realtime event can arrive a few ms before the server's response (which
+  // rebases the form). Only show the warning when the difference persists.
+  const [staleShown, setStaleShown] = useState(false);
+  useEffect(() => {
+    if (!stale) {
+      setStaleShown(false);
+      return;
+    }
+    const timer = setTimeout(() => setStaleShown(true), STALE_NOTICE_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [stale]);
 
   useEffect(() => {
     if (stale && !dirty) {
@@ -39,7 +52,7 @@ export function useEditBase<T, F>(item: T | undefined, toForm: (record: T | unde
   }, [item]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return {
-    form, setForm, initial, dirty, stale,
+    form, setForm, initial, dirty, stale: staleShown,
     baseVersion: base ? version(base) : undefined,
     reload: () => { setBase(item); setForm(toForm(item)); },
     rebase: (saved: T) => { setBase(saved); setForm(toForm(saved)); },

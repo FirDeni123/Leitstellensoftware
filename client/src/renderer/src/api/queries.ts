@@ -7,7 +7,7 @@ import { onRealtimeEvent, onResync, useSession } from '@/state/session';
 import { ApiClient, ApiError } from './http';
 import type {
   ActiveAssignment, Alarm, AlarmRule, AuditPage, Call, ControlCenter, Incident, IncidentEvent, IncidentSummary, InterfaceEventItem,
-  InterfaceItem, LoginEvent, Page, Permission, PluginInfo, PoliceNotice, Role, SystemInfo, User,
+  InterfaceItem, LoginEvent, Page, Permission, PluginInfo, PoliceNotice, ProposalSettings, Role, SystemInfo, User,
 } from './types';
 
 export const queryClient = new QueryClient({
@@ -29,7 +29,7 @@ export const TOPIC_INVALIDATIONS: Record<string, readonly (readonly string[])[]>
   'control_center.changed': [['control-centers']],
   'audit.created': [['audit'], ['import-jobs']],
   'system.mode_changed': [['system-info'], ['interfaces'], ['operation-mode']],
-  'incident.changed': [['incidents'], ['incident-events'], ['active-assignments']],
+  'incident.changed': [['incidents'], ['incident-events'], ['active-assignments'], ['proposals']],
   'call.changed': [['calls'], ['incidents']],
   'alarm.changed': [['alarms'], ['incident-events'], ['incidents']],
   'police_notice.changed': [['police-notices'], ['alarms'], ['incident-events']],
@@ -205,5 +205,15 @@ export function useInterfaceEvents(id: string | null) {
     queryKey: ['interface-events', id],
     queryFn: () => api.get<InterfaceEventItem[]>(`/interfaces/${id}/events`, { limit: 100 }),
     enabled: !!id,
+  });
+}
+
+// ---------------------------------------------------------------------- Phase 5: proposal
+export function useProposalSettings(controlCenterId: string | undefined) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['proposal-settings', controlCenterId],
+    queryFn: () => api.get<ProposalSettings>('/proposal-settings', { control_center_id: controlCenterId }),
+    enabled: !!controlCenterId,
   });
 }

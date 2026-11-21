@@ -9,6 +9,7 @@ import { AlarmRulesPanel } from './alarming/AlarmRulesPanel';
 import { AlarmsPanel } from './alarming/AlarmsPanel';
 import { InterfacesPanel } from './alarming/InterfacesPanel';
 import { ActiveCallsPanel } from './operations/ActiveCallsPanel';
+import { ProposalSettingsPanel } from './proposal/ProposalSettingsPanel';
 import { CallsPanel } from './operations/CallsPanel';
 import { IncidentsPanel } from './operations/IncidentsPanel';
 import { AuditLogPanel } from './panels/AuditLogPanel';
@@ -28,6 +29,7 @@ const IMPLEMENTED: Record<string, () => ReactNode> = {
   alarms: () => <AlarmsPanel />,
   'alarm-rules': () => <AlarmRulesPanel />,
   interfaces: () => <InterfacesPanel />,
+  'proposal-settings': () => <ProposalSettingsPanel />,
   keywords: () => <CrudPanel config={md.KEYWORDS} />,
   stations: () => <CrudPanel config={md.STATIONS} />,
   'vehicle-admin': () => <CrudPanel config={md.VEHICLES} />,

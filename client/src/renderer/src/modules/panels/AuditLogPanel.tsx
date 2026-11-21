@@ -29,6 +29,8 @@ const ENTITY_LABEL: Record<string, string> = {
   alarm: 'Alarmierung',
   interface: 'Schnittstelle',
   police_notice: 'Polizei-Hinweis',
+  proposal: 'Einsatzmittelvorschlag',
+  proposal_settings: 'Vorschlagsregeln',
 };
 
 const ACTION_LABEL: Record<string, string> = {
@@ -38,7 +40,7 @@ const ACTION_LABEL: Record<string, string> = {
   upload: 'Datei hochgeladen', commit: 'Import übernommen', discard: 'Import verworfen',
   status: 'Status geändert', assign: 'Fahrzeuge zugeordnet', release: 'Fahrzeug freigegeben', alarm: 'Alarmierung',
   receive: 'Notruf eingegangen', answer: 'Notruf angenommen', hold: 'Gehalten', takeover: 'Übernommen', end: 'Beendet',
-  link: 'Zugeordnet', acknowledge: 'Bestätigt', enable: 'Aktiviert', disable: 'Deaktiviert', test: 'Getestet', recover: 'Wiederhergestellt',
+  link: 'Zugeordnet', accept: 'Übernommen', acknowledge: 'Bestätigt', enable: 'Aktiviert', disable: 'Deaktiviert', test: 'Getestet', recover: 'Wiederhergestellt',
 };
 
 function formatValue(v: unknown): string {
