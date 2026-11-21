@@ -12,11 +12,12 @@ gleichzeitig arbeitende Disponenten.
 
 ## Stand
 
-**Phase 5 (Einsatzmittelvorschlag) ist abgeschlossen** (Version 0.5.0): Vorschlag passender
-Fahrzeuge nach AAO, Fahrzeit, Status und Ersatztypen mit Begründung je Fahrzeug, Alternativen
-und administrierbaren Regeln – ohne automatische Alarmierung. Bereits vorhanden: Alarmierung
-mit AAO, Vorschau und Bestätigung, Polizei-Hinweis (nur Information), Schnittstellen-Plugins
-mit strikter Trennung von Simulation und Echtbetrieb; Notrufannahme, Einsatzbearbeitung,
+**Phase 6 (Fahrzeuge, Karte, Simulation) ist abgeschlossen** (Version 0.6.0): Fahrzeugstatus mit
+Statushistorie, Sprechwünsche, Karte mit Live-Positionen, simulierte Fahrten nach der
+Alarmierung (Ausrücken, Anfahrt, Ankunft, Rückfahrt) mit OSRM-Routing oder gekennzeichneter
+Luftlinie. Bereits vorhanden: Einsatzmittelvorschlag mit Begründungen, Alarmierung mit AAO,
+Vorschau und Bestätigung, Polizei-Hinweis (nur Information), Schnittstellen-Plugins mit
+strikter Trennung von Simulation und Echtbetrieb; Notrufannahme, Einsatzbearbeitung,
 Grundsystem und Stammdatenverwaltung. Details, Testergebnisse und nächste Schritte:
 [docs/STATUS.md](docs/STATUS.md).
 

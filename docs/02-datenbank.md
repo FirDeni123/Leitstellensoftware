@@ -35,7 +35,7 @@ Fremdschlüssel**. Ein `ON DELETE SET NULL` wäre selbst eine Änderung am Proto
 das Löschen referenzierter Datensätze blockieren. Der Name des Handelnden wird deshalb
 zusätzlich als Text gespeichert.
 
-## 2. Tabellen je Phase (Phasen 2–5 umgesetzt, 6–7 geplant)
+## 2. Tabellen je Phase (Phasen 2–6 umgesetzt, 7 geplant)
 
 ### Phase 2 – Stammdaten (✅ umgesetzt, Migration `0002`)
 
@@ -109,15 +109,24 @@ sonst Bearbeitungskonflikte bei Administratoren auslösen.
 | `proposal_settings` | Regeln je Leitstelle (eindeutig je `control_center_id`): `settings` (JSONB, geprüft durch `ProposalSettingsData`: Umwegfaktor, Faktor Sonderrechte, Ausrückzeit Status 2, Malus Ersatztyp, Bonus Wache laut AAO, maximale Fahrzeit, Alternativen, Vorfilter, Routing an/aus, Ersatztypen je Fahrzeugtyp-Kürzel), `version`, `updated_by_name`. Ohne Zeile gelten die Standardwerte |
 | `proposals` | Gespeicherte Vorschläge: `incident_id`, `computed_at`, `computed_by(_name)`, `stage`, `duration_ms`, `inputs` (Stufe, Zusatzbedarf, Stichwort, Ort, Routing, Regeln zum Zeitpunkt), `result` (Bedarf, Vorschläge mit Begründungen, Alternativen, Fehlbedarf, Hinweise), `accepted_vehicle_ids`, `accepted_at`, `accepted_by_name` |
 
-### Phase 6 – Fahrzeugstatus, Funk und Navigation
+### Phase 6 – Fahrzeugstatus, Funk und Navigation (umgesetzt, Migration `0006`)
 
 | Tabelle | Zweck / Spalten |
 |---|---|
-| `vehicle_status_definitions` | Administrierbare Statusbezeichnungen. `code` (0–9), `label`, `color`, `counts_as_available` |
-| `vehicle_status_history` | Statushistorie (append-only). `vehicle_id`, `status_code`, `source` (`dispatcher`/`simulation`/`gps`/`automatic`), `ts` |
-| `talk_requests` | Sprechwünsche. `vehicle_id`, `priority` (normal / dringend = Status 0), `status` (`open`, `accepted`, `deferred`, `rejected`, `done`), `requested_at`, `handled_by`, `handled_at` |
-| `vehicle_movements` | Aktive und abgeschlossene Fahrten. `vehicle_id`, `incident_id`, `route_geometry` (encoded polyline), `distance_m`, `duration_s`, `started_at`, `eta`, `finished_at`, `mode` (`sim`) |
-| `vehicle_tracks` | Zurückgelegte Strecke (vereinfachte Punkte, monatlich partitioniert) |
+| `vehicle_status_definitions` | (seit Phase 2) Statusbezeichnungen 0–9, Farbe, `counts_as_available` |
+| `vehicle_status_history` | Statushistorie, **unveränderbar** (Trigger). `vehicle_id`, `status_code`, `previous_code`, `source` (`dispatcher`/`simulation`/`fms`/`system`), `incident_id`, `actor_name`, `note`, `ts` |
+| `talk_requests` | Sprechwünsche. `priority` (0 = priorisiert/Notruf, 5 = normal), `status` (`open`/`accepted`/`deferred`/`rejected`/`done`), `source`, `incident_id`, bearbeitet von/um, `note`. Höchstens ein offener Sprechwunsch je Fahrzeug (partieller Unique-Index); ein Status 0 stuft einen offenen Status 5 hoch |
+| `vehicle_movements` | Simulierte Fahrten. `kind` (`to_incident`/`to_station`), `status` (`pending`/`active`/`arrived`/`cancelled`), `emergency` (Sonderrechte), Ziel (`dest_lat`/`dest_lon`), `route_source` (`osrm`/`straight`), `geometry` (`[[lon, lat], …]`), `profile` (kumulierte Sekunden je Stützpunkt), `depart_sim`, `duration_s`, `distance_m`, `note`. Höchstens eine offene Fahrt je Fahrzeug (partieller Unique-Index) |
+
+Zeiten von Fahrten sind **Simulationssekunden**; die Simulationsuhr (Basis, Zeitfaktor,
+Pause) steht in `system_settings` (`simulation_clock`). Positionen werden nicht je Takt
+gespeichert, sondern aus Route und Simulationszeit berechnet – identisch für alle Clients
+und nach einem Neustart rekonstruierbar. Gespeichert wird die Position beim Halt
+(Ankunft, Abbruch, Verschieben) in `vehicles.latitude/longitude` mit `position_source`
+(`station`/`sim`; `gps` ist für spätere Ortungs-Plugins reserviert).
+
+Nicht umgesetzt: `vehicle_tracks` (zurückgelegte Strecken als Historie) – folgt bei Bedarf
+mit der Auswertung (Phase 7).
 
 ### Phase 7 – Telefonie, Sprache und Training
 

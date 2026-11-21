@@ -403,6 +403,8 @@ export interface IncidentSummary {
   status: IncidentStatus;
   priority: number;
   address: string | null;
+  latitude: number | null;
+  longitude: number | null;
   created_at: string;
   status_changed_at: string;
   vehicles: string[];
@@ -704,4 +706,112 @@ export interface ProposalSettings {
   updated_at: string | null;
   updated_by_name: string | null;
   routing_configured: boolean;
+}
+
+// ------------------------------------------------------------------ Phase 6: fleet & map
+export interface FleetPosition {
+  lat: number;
+  lon: number;
+  source: 'station' | 'sim' | 'gps' | 'unknown' | string;
+  moving: boolean;
+  heading: number | null;
+  eta_s: number | null;
+  kind: 'to_incident' | 'to_station' | null;
+}
+
+export interface FleetVehicle {
+  id: Uuid;
+  call_sign: string;
+  vehicle_type: string;
+  station_id: Uuid;
+  station: string;
+  organization: string;
+  radio_group_id: Uuid | null;
+  radio_group: string | null;
+  status_code: number;
+  status_changed_at: string | null;
+  available: boolean;
+  position: FleetPosition | null;
+  incident: { id: Uuid; number: string; status: IncidentStatus; alarmed: boolean } | null;
+  talk_request: { id: Uuid; priority: number; status: string } | null;
+  planned_departure_s: number | null;
+}
+
+export interface LivePosition {
+  id: Uuid;
+  lat: number;
+  lon: number;
+  heading: number;
+  eta_s: number;
+  kind: 'to_incident' | 'to_station';
+  incident_id: Uuid | null;
+  status_code: number;
+}
+
+export interface PositionsEvent {
+  sim_time: number;
+  factor: number;
+  paused: boolean;
+  positions: LivePosition[];
+}
+
+export interface StatusHistoryEntry {
+  id: number;
+  status_code: number;
+  previous_code: number | null;
+  source: 'dispatcher' | 'simulation' | 'fms' | 'system';
+  incident_id: Uuid | null;
+  actor_name: string;
+  note: string | null;
+  ts: string;
+}
+
+export interface TalkRequest {
+  id: Uuid;
+  control_center_id: Uuid;
+  vehicle_id: Uuid;
+  call_sign: string;
+  vehicle_type: string;
+  station: string;
+  priority: number;
+  status: 'open' | 'accepted' | 'deferred' | 'rejected' | 'done';
+  source: string;
+  incident_id: Uuid | null;
+  incident_number: string | null;
+  created_at: string;
+  handled_at: string | null;
+  handled_by_name: string | null;
+  note: string | null;
+}
+
+export interface Movement {
+  id: Uuid;
+  vehicle_id: Uuid;
+  call_sign: string;
+  incident_id: Uuid | null;
+  kind: 'to_incident' | 'to_station';
+  status: 'pending' | 'active';
+  route_source: 'osrm' | 'straight' | 'pending' | string;
+  emergency: boolean;
+  geometry: [number, number][];
+  dest: [number, number];
+  eta_s: number | null;
+  depart_in_s: number | null;
+  note: string | null;
+}
+
+export interface MapConfig {
+  tile_url: string;
+  attribution: string;
+  max_zoom: number;
+  center: [number, number] | null;
+  routing: boolean;
+}
+
+export interface SimulationClock {
+  sim_time: number;
+  factor: number;
+  paused: boolean;
+  factors: number[];
+  simulation_mode: boolean;
 }

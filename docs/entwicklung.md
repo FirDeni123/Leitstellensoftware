@@ -24,7 +24,8 @@ Demo-Benutzer: `admin.demo`, `lead.demo`, `dispo.demo`, `annahme.demo`,
 `beobachter.demo`. Konfiguration erfolgt über Umgebungsvariablen mit Präfix `ILS_` (siehe
 `server/app/core/config.py`), z. B. `ILS_REDIS_URL=redis://localhost:6379/0` oder
 `ILS_OSRM_URL=http://localhost:5000` (Routing für Fahrzeiten; ohne Angabe werden Fahrzeiten
-aus Luftlinie × Umwegfaktor geschätzt).
+aus Luftlinie × Umwegfaktor geschätzt). `ILS_SIMULATION_TICK_SECONDS=0` schaltet den
+Simulationstakt ab (Tests takten ihn mit einer steuerbaren Uhr selbst).
 
 ## Client starten
 
@@ -40,10 +41,10 @@ Die Serveradresse wird in der Anmeldemaske unter „Server“ eingestellt.
 ## Tests
 
 ```bash
-cd server && uv run pytest -q                     # 122 Tests, echte PostgreSQL-Testdatenbank ils_test
+cd server && uv run pytest -q                     # 136 Tests, echte PostgreSQL-Testdatenbank ils_test
 cd server && uv run ruff check app tests && uv run ruff format --check app tests
-cd client && npm run typecheck && npm test        # 40 Unit-Tests (vitest)
-cd client && npm run build:web && npm run e2e     # 11 E2E-Tests (Server mit seed-demo, Simulationsbetrieb)
+cd client && npm run typecheck && npm test        # 48 Unit-Tests (vitest)
+cd client && npm run build:web && npm run e2e     # 13 E2E-Tests (Server mit seed-demo, Simulationsbetrieb)
 ```
 
 Server-Tests legen das Schema über die Alembic-Migrationen an. Damit werden die Migrationen

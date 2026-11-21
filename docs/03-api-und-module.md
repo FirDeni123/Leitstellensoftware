@@ -134,11 +134,35 @@ Beteiligung der Wache (erhalten nur die eigenen Fahrzeuge), dazu AAO-Einträge.
 Die Alarmierungsvorschau (`/incidents/{id}/alarm-preview`) verwendet dieselbe Engine, damit
 Vorschlag und Alarmierungsdialog identische Fahrzeuge und Begründungen zeigen.
 
+### Phase 6 – Fahrzeuge, Karte, Simulation (umgesetzt)
+
+| Methode | Pfad | Recht | Zweck |
+|---|---|---|---|
+| GET | `/fleet?control_center_id=` | `incidents.read` | alle Fahrzeuge mit Status, Position (Wache/vor Ort/fahrend mit ETA), Einsatz, Sprechwunsch, geplanter Abfahrt |
+| POST | `/vehicles/{id}/status` | `vehicles.status.set` | FMS-Status setzen; 0/5 erzeugen einen Sprechwunsch. `simulate: true` (zusätzlich `simulation.control`, nur Simulationsbetrieb) = Statusmeldung des Fahrzeugs simulieren |
+| GET | `/vehicles/{id}/status-history` | `incidents.read` | unveränderbare Statushistorie |
+| GET/POST | `/talk-requests` · `/talk-requests/{id}/{accept,defer,reject,done}` | `radio.handle` | Sprechwünsche (Priorität 0 zuerst) |
+| GET | `/movements?control_center_id=` | `incidents.read` | geplante/laufende Fahrten mit Route |
+| GET | `/map/config` | angemeldet | Kachelquelle, Quellenangabe, Startausschnitt, Routing vorhanden |
+| GET/PUT | `/simulation/clock` | lesen `incidents.read`, ändern `simulation.control` (nur Simulationsbetrieb) | Pause, Zeitfaktor 0,5×–30× |
+| POST | `/simulation/vehicles/{id}/position` · `/breakdown` | `simulation.control` | Fahrzeug verschieben, Ausfall simulieren (Status 6) |
+
+**Statusfolgen:** 3 → `s3_at`, Einsatz „Anfahrt“; 4 → `s4_at`, „Am Einsatzort“, Eintrag
+„Ankunft“; 1/2 in einem Einsatz → Fahrzeug meldet frei und wird freigegeben; 6 → aus dem
+Einsatz gelöst (Warnung im Verlauf). Im Simulationsbetrieb folgt das simulierte Fahrzeug
+diesen Eingaben (3 = sofort losfahren, 4 = sofort am Ziel, 2 = auf die Wache, 1 = Rückfahrt).
+
+**Simulationsdienst:** Nach der Alarmierung rücken Fahrzeuge nach der Ausrückzeit aus
+(Status 2: Ausrückzeit aus den Vorschlagsregeln, Status 1: 15 s), fahren mit
+Sonderrechten zum Einsatzort (Route aus OSRM, sonst gekennzeichnete Luftlinie), melden
+Status 3 bei Abfahrt und 4 bei Ankunft. Nach dem Freigeben: Status 1, Rückfahrt ohne
+Sonderrechte, Status 2 auf der Wache. Ein Prozess simuliert (PostgreSQL-Advisory-Lock),
+Takt 1 s (`ILS_SIMULATION_TICK_SECONDS`), im Echtbetrieb keine Simulation.
+
 ### Geplant
 
 | Phase | Ressourcen |
 |---|---|
-| 6 | `/vehicles/{id}/status`, `/talk-requests` (annehmen, zurückstellen, ablehnen), `/simulation/vehicles/{id}/move`, `/simulation/control` (Ausfall, Pause), `/routing/route` |
 | 7 | `/training/scenarios`, `/training/sessions` (Start, Ende, Beobachtung), `/training/sessions/{id}/evaluation`, Audio-WebSocket `/training/sessions/{id}/audio` |
 
 ## 3. WebSocket-Protokoll
@@ -161,8 +185,10 @@ Schließcodes: `4001` Authentifizierung fehlgeschlagen/abgelaufen · `4002` Rech
 `layout.changed`, `master_data.changed` (`data.collection` nennt die betroffene Sammlung,
 z. B. `vehicles`; zugestellt nur an Benutzer der betroffenen Leitstelle). `call.changed` (Aktion `ringing`, `answered`, `on_hold`, …), `incident.changed`, `alarm.changed`,
 `police_notice.changed` (`for_user` = auslösender Disponent, bei ihm erscheint das Popup),
-`interface.changed`. Geplant: `vehicle.status`, `vehicle.positions` (gebündelt je Takt),
-`talk_request.*`, `training.*`.
+`interface.changed`, `vehicle.status_changed`, `movement.changed`, `talk_request.changed`,
+`simulation.clock_changed` und `vehicle.positions` (ein Ereignis je Leitstelle und Takt mit
+allen fahrenden Fahrzeugen: Position, Richtung, ETA). Der Client bündelt Invalidierungen je
+Abfrage (kein Abbruch laufender Abfragen, höchstens ein Nachladen). Geplant: `training.*`.
 
 Events enthalten nur IDs und Kerndaten. Der Client invalidiert damit seinen Cache und lädt
 gezielt nach (`client/src/renderer/src/api/queries.ts`, `TOPIC_INVALIDATIONS`). Ausnahme

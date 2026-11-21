@@ -3,10 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <!-- Strict CSP: no remote scripts, no eval. connect-src allows the configurable server
-         (http/https + ws/wss). Map tiles (phase 6) will be added to img-src explicitly. -->
+         and map tiles (http/https + ws/wss; MapLibre loads tiles via fetch). The MapLibre
+         worker is a bundled file ('self'); blob: is needed for decoded tile images. -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http: https: ws: wss:; object-src 'none'; base-uri 'none'; frame-src 'none'"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self' http: https: ws: wss:; object-src 'none'; base-uri 'none'; frame-src 'none'"
     />
     <title>ILS-Sim Leitstelle</title>
   </head>

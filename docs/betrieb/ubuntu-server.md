@@ -1,6 +1,6 @@
 # Betrieb: Ubuntu-Server
 
-## Systemanforderungen (Phase 1–5)
+## Systemanforderungen (Phase 1–6)
 
 - Ubuntu Server 22.04 oder 24.04 LTS, 2 vCPU, 4 GB RAM, 40 GB SSD
 - Ab Phase 6 (OSRM, ein Bundesland): +4 GB RAM. Ab Phase 7 (lokale Sprachmodelle): 8+ GB
@@ -46,6 +46,29 @@ docker compose exec api ils-admin create-user m.muster "Max Muster" --role dispa
 
 **Update:** `git pull && docker compose up -d --build`. Migrationen laufen beim Start der API
 automatisch (`alembic upgrade head`). Vorher eine Sicherung erstellen.
+
+## Routing (OSRM) und Kartenkacheln
+
+Ohne Routing-Dienst schätzt das System Fahrzeiten (Luftlinie × Umwegfaktor) und simulierte
+Fahrzeuge fahren gekennzeichnet auf der Luftlinie. Für straßengenaue Fahrten:
+
+```bash
+deploy/scripts/prepare-osrm.sh                      # Schleswig-Holstein, ca. 10–20 min, ~2 GB Platz
+echo "ILS_OSRM_URL=http://osrm:5000" >> deploy/.env
+docker compose -f deploy/docker-compose.yml --profile routing up -d
+```
+
+Ein anderes Gebiet: `deploy/scripts/prepare-osrm.sh europe/germany/hamburg`. Kartendaten
+monatlich aktualisieren: Skript erneut ausführen, dann `docker compose restart osrm`.
+
+**Kartenkacheln:** Standard sind die OpenStreetMap-Server – laut deren Nutzungsrichtlinie nur
+für geringe Last. Für den Betrieb eigene Kacheln oder einen Anbieter in `ILS_MAP_TILE_URL`
+(mit `{z}/{x}/{y}`) und `ILS_MAP_TILE_ATTRIBUTION` eintragen. Die Quellenangabe wird in der
+Karte immer angezeigt.
+
+> Hinweis: Compose-Dienst und Skript sind in der Entwicklungsumgebung nicht ausgeführt
+> worden (kein Docker). Die OSRM-Anbindung des Servers ist gegen einen simulierten Endpunkt
+> getestet.
 
 ## Datensicherung und Wiederherstellung
 

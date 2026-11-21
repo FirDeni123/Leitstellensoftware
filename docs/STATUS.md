@@ -1,13 +1,46 @@
 # Projektstatus
 
-**Stand:** 21.11.2026 · **Version:** 0.5.0 · **Aktuelle Phase:** 5 abgeschlossen, nächste: Phase 6 (Fahrzeuge, Karte, Navigation)
+**Stand:** 21.11.2026 · **Version:** 0.6.0 · **Aktuelle Phase:** 6 abgeschlossen, nächste: Phase 7 (Telefonie, Sprache, KI-Anrufer, Ausbildermodus)
 
-**Testergebnis zuletzt:** Server 122/122 ✅ · Client-Unit 40/40 ✅ · E2E 11/11 ✅ (dreimal in Folge) ·
+**Testergebnis zuletzt:** Server 136/136 ✅ · Client-Unit 48/48 ✅ · E2E 13/13 ✅ (dreimal in Folge) ·
 Ruff ✅ · TypeScript ✅ · `alembic check` ✅
 
 **Repository:** https://github.com/FirDeni123/Leitstellensoftware (Branch `main`).
 
-## Phase 5 – Einsatzmittelvorschlag (umgesetzt und getestet)
+## Phase 6 – Fahrzeuge, Karte, Simulation (umgesetzt und getestet)
+
+| Bereich | Inhalt | Nachweis |
+|---|---|---|
+| Datenmodell | Migration `0006`: `vehicle_status_history` (unveränderbar, Trigger), `talk_requests`, `vehicle_movements` (Route + Zeitprofil in Simulationssekunden); Simulationsuhr in `system_settings` | Migration up/down/up, `alembic check`, `test_status_effects_…` (UPDATE abgewiesen) |
+| Fahrzeugstatus | FMS-Status mit Folgen: 3/4 → Einsatz „Anfahrt“/„Am Einsatzort“ mit Zeiten und Verlauf; 1/2 → freigemeldet und freigegeben; 6 → aus dem Einsatz gelöst; 0/5 → Sprechwunsch; Statushistorie je Fahrzeug | `test_status_effects_history_and_permissions`, `test_out_of_service_…` |
+| Sprechwünsche | Warteschlange (0 vor 5, dann Zeit), Hochstufen 5 → 0, Sprechaufforderung, zurückstellen, ablehnen, erledigt mit Vermerk im Einsatzverlauf, Signalton bei Status 0 | `test_talk_requests_workflow`, E2E |
+| Simulation | Ausrücken nach Ausrückzeit, Fahrt mit Sonderrechten (OSRM-Route oder gekennzeichnete Luftlinie), S3 bei Abfahrt, S4 bei Ankunft, Rückfahrt S1 → S2 nach Freigabe, Ausfall, Verschieben, Pause und Zeitraffer, keine Simulation im Echtbetrieb, ein simulierender Prozess (Advisory-Lock), neustartsicher | `test_m6_…`, `test_release_drives_back_…`, `test_clock_pause_factor_and_real_mode`, `test_breakdown_…`, `test_single_simulation_leader`, `test_movements_survive_a_restart` |
+| Echtzeit | ein `vehicle.positions`-Ereignis je Leitstelle und Takt; alle Clients erhalten identische Daten | `test_m6_all_clients_see_identical_positions` (zwei echte WebSocket-Verbindungen) |
+| Karte | MapLibre: Wachen, Fahrzeuge (Statusfarbe, live), Einsätze, Routen, Quellenangabe; Einsatzort per Klick; Fahrzeug verschieben (Simulation); Simulationsuhr | E2E `phase6.spec.ts`; Kachelanzeige unter CSP mit lokalem Testkachelserver geprüft |
+| Fenster | Fahrzeugübersicht (Status setzen, Historie, Ausfall), Statusübersicht (nach Wache, Funkrufgruppe, Organisation), Sprechwünsche; im Einsatz Status, S3/S4-Zeiten, Live-ETA | E2E |
+| Betrieb | optionaler OSRM-Dienst in Docker Compose (Profil „routing“) und `prepare-osrm.sh` | nur Syntax geprüft (kein Docker hier) |
+
+**Meilenstein M6 erreicht:** 50 Fahrzeuge fahren gleichzeitig (laufender Takt 42 ms), alle
+Clients erhalten identische Positionen im 1-Hz-Takt, die Ankunft setzt Status 4 und schreibt
+den Einsatzverlauf. „Straßengenau“ setzt den OSRM-Dienst voraus: Die Anbindung ist gegen einen
+simulierten OSRM-Endpunkt getestet; ohne Routing fahren die Fahrzeuge gekennzeichnet auf der
+Luftlinie.
+
+## Bei der Umsetzung von Phase 6 gefundene und behobene Fehler
+
+- **Abfragesturm bei vielen Sitzungen:** Jede Statusänderung ließ jeden Client die Flotte neu
+  laden und brach laufende Abfragen ab – bei vielen gleichzeitigen Sitzungen kam die
+  Aktualisierung nie an (Karte blieb auf altem Stand). Invalidierungen werden jetzt je
+  Abfrage gebündelt, laufende Abfragen nicht mehr abgebrochen (Unit-Tests). Gilt für alle
+  Echtzeit-Aktualisierungen; die E2E-Laufzeit sank von ca. 1,7 auf 1,3 min.
+- **Simulations-Sperre blieb im Verbindungspool:** Beim Abgeben der Leitung kehrte die
+  Datenbankverbindung mit gehaltener Sperre in den Pool zurück – ein anderer Prozess hätte
+  nie übernehmen können. Die Sperre wird jetzt ausdrücklich freigegeben (Test).
+- **Karte mit Höhe 0:** Das MapLibre-Stylesheet überschrieb die Größenregel des Containers;
+  der E2E-Test prüft jetzt, dass Marker innerhalb der sichtbaren Karte liegen.
+- **Migration:** asyncpg erlaubt nur eine Anweisung je Aufruf – Trigger und Funktion getrennt.
+
+## Phase 5 – Einsatzmittelvorschlag (abgeschlossen, 0.5.0)
 
 | Bereich | Inhalt | Nachweis |
 |---|---|---|
@@ -87,34 +120,37 @@ Notrufe, Fahrzeugzuordnung und Statuswechsel mit den handelnden Personen
 
 | Punkt | Geplant in |
 |---|---|
-| OSRM-Dienst als Container bereitstellen (Anbindung ist fertig, aber nur gegen simulierten Endpunkt getestet) | Phase 6 |
-| Ausrückzeit je Wache (z. B. Freiwillige Feuerwehr), Sonderrechtsfaktor je Fahrzeugtyp/Straßenklasse | später (Erweiterung der Vorschlagsregeln) |
-| „Anfahrt“/„Am Einsatzort“ aus Fahrzeugstatus (S3/S4) | Phase 6 |
-| Funkalarmierung (POCSAG/TETRA) – RICs werden im Echtbetrieb nur protokolliert („nicht zugestellt“) | späteres Plugin |
+| OSRM-Dienst und OSM-Kacheln in einer Umgebung mit Docker/Internet prüfen | Betrieb (Anbindung fertig) |
+| Bündelung (Clustering) überlappender Fahrzeugmarker an einer Wache | Phase 8 |
+| Zurückgelegte Strecken (Tracks) speichern und anzeigen | Phase 7 (Auswertung) |
+| Sonderrechtsfaktor je Fahrzeugtyp/Straßenklasse, Ausrückzeit je Wache | spätere Erweiterung der Vorschlagsregeln |
+| Reale FMS-/TETRA-Statusanbindung und GPS-Ortung (Plugins `PositionSource`) | spätere Plugins |
+| Funkalarmierung (POCSAG/TETRA) | späteres Plugin |
 | Anbindung einer konkreten Feuerwehrsoftware (z. B. Feuersoftware Connect) | späteres Plugin, nach Schnittstellendoku und Testzugang |
-| Einsatzort per Karte wählen, Adresssuche (Geokodierung) | Phase 6 |
+| Adresssuche (Geokodierung) für den Einsatzort | Phase 8 |
 | Gemeindeschlüssel-Bereiche bei Zuständigkeit und AAO-Bereichswahl auswerten (heute nur Geometrie) | mit Adresssuche |
 | Klingelnde Notrufe ohne Annahme nach Zeit als „verpasst“ markieren | Phase 7 (mit Telefonie) |
+| Rollen-Editor nutzt noch nicht den gemeinsamen Bearbeitungsschutz | Phase 7 |
 | Pop-out-Fenster für Mehrmonitorbetrieb | Phase 8 |
 | Allowlist für Webhook-Ziele, IP-basierte Ratenbegrenzung, Zertifikats-Pinning, Code-Signing, Auto-Update | Phase 8 |
-| Rollen-Editor nutzt noch nicht den gemeinsamen Bearbeitungsschutz | Phase 6 |
+| Electron: Karten-Worker über das `app://`-Protokoll im echten Windows-Client prüfen (Web-Build geprüft) | Windows-CI |
 
 ## In dieser Umgebung nicht verifizierbar (unverändert)
 
 - Docker-Compose-Gesamtstack und Installationsskript, Windows-Installer (CI-Job), native
   Fensterleiste unter Windows.
 
-## Nächster konkreter Schritt (Phase 6 – Fahrzeuge, Karte, Navigation)
+## Nächster konkreter Schritt (Phase 7 – Telefonie, Sprache, KI-Anrufer)
 
-1. Statussystem im Betrieb: Statuswechsel je Fahrzeug (Disponent, Simulation), Statushistorie
-   (`vehicle_status_history`), Sprechwünsche (Status 0/5) mit Annehmen/Zurückstellen.
-2. Simulationsdienst: Alarmierung → Status 3 → Fahrt entlang der Route → Ankunft Status 4,
-   Positionen gebündelt im 1-Hz-Takt an alle Clients; Einsatzstatus „Anfahrt“/„Am Einsatzort“
-   automatisch.
-3. Karte (MapLibre) mit Wachen, Fahrzeugen, Einsatzorten; Einsatzort per Klick wählen.
-4. OSRM-Container in Docker Compose (Region aus OSM-Extrakt) – damit nutzt der
-   Einsatzmittelvorschlag automatisch echte Straßenfahrzeiten.
-5. Abnahme M6: 50 Fahrzeuge fahren gleichzeitig, alle Clients sehen identische Positionen.
+1. Sprachpipeline im simulierten Gespräch: Spracherkennung (faster-whisper) und
+   Sprachausgabe (Piper) auf dem Server, Audio über WebSocket; ohne Sprache weiterhin Text.
+2. KI-Anrufer mit Claude (Modell konfigurierbar, Standard `claude-opus-5-5`): Personas,
+   Schwierigkeitsgrade, Szenario-„Wahrheit“; nie Verbindung zu echten Notrufleitungen.
+3. Szenario-Editor und Ausbildermodus (beobachten, eingreifen), automatische Auswertung mit
+   Checkliste (Pflichtfragen, Zeiten, Stichwort, Alarmierung).
+4. Abnahme M7: Sprachgespräch mit KI-Anrufer (Antwortlatenz unter 2,5 s), Einsatzanlage
+   währenddessen, Auswertung danach. Voraussetzung: ein API-Schlüssel für Claude (wird
+   verschlüsselt gespeichert, nie im Code).
 
 ## Annahmen und Entscheidungen
 

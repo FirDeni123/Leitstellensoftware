@@ -141,3 +141,15 @@ und tauscht erst nach Erfolg; der alte Stand bleibt als `ils_before_restore` erh
   fest; eine Allowlist für Zielhosts ist für Phase 8 vorgesehen.
 - **Abhängigkeit:** `jsonschema` (Prüfung der Plugin-Konfiguration).
 
+## Fahrzeuge, Karte und Simulation (Phase 6)
+
+- **Keine Simulation im Echtbetrieb:** Der Simulationsdienst taktet nur im
+  Simulationsbetrieb; beim Wechsel in den Echtbetrieb werden alle simulierten Fahrten
+  beendet. Simulationssteuerung (Uhr, Verschieben, Ausfall, simulierte Statusmeldungen) nur
+  mit `simulation.control` und nur im Simulationsbetrieb.
+- **Nachvollziehbarkeit:** Jede Statusänderung steht unveränderbar in der Statushistorie
+  (Quelle Disponent/Simulation, Person, Zeit) und im Änderungsprotokoll.
+- **CSP:** ergänzt um `worker-src 'self' blob:` und `img-src … blob:` für den Karten-Worker
+  (gebündelte Datei, kein Fremdskript) und dekodierte Kacheln. Kacheln werden per `fetch`
+  geladen (`connect-src`); die Kachelquelle legt der Server fest.
+

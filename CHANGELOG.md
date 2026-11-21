@@ -1,5 +1,32 @@
 # Änderungsprotokoll
 
+## 0.6.0 – 21.11.2026 – Phase 6: Fahrzeuge, Karte, Simulation
+
+### Hinzugefügt
+- Fahrzeugstatus (FMS) mit Folgen für den Einsatz (Anfahrt, Am Einsatzort, Freimeldung,
+  Außer Dienst) und unveränderbarer Statushistorie.
+- Sprechwünsche (Status 5 und priorisiert 0) mit Warteschlange, Sprechaufforderung,
+  Zurückstellen, Ablehnen, Erledigt mit Vermerk und Signalton.
+- Simulationsdienst: Ausrücken nach der Alarmierung, Fahrten mit Sonderrechten, Ankunft
+  (Status 4), Rückfahrt (1 → 2), Ausfall, Verschieben, Pause und Zeitraffer; neustartsicher,
+  ein simulierender Prozess, keine Simulation im Echtbetrieb.
+- Routing über OSRM (optionaler Compose-Dienst, Aufbereitungsskript) mit gekennzeichnetem
+  Rückfall auf die Luftlinie.
+- Karte (MapLibre) mit Wachen, Fahrzeugen in Statusfarbe (live), Einsätzen und Routen;
+  Einsatzort per Klick; Fenster Fahrzeugübersicht, Statusübersicht und Sprechwünsche.
+- Im Einsatz: Status, S3/S4-Zeiten und Live-ETA je Fahrzeug.
+
+### Geändert
+- Echtzeit-Aktualisierungen werden je Abfrage gebündelt; laufende Abfragen werden nicht
+  mehr abgebrochen.
+- CSP um Karten-Worker und Kachelbilder ergänzt.
+- Einsatzliste liefert Koordinaten.
+
+### Behoben (während der Entwicklung gefunden)
+- Bei vielen gleichzeitigen Sitzungen kamen Aktualisierungen nicht an (Abfragesturm).
+- Die Simulations-Sperre blieb nach dem Abgeben im Verbindungspool bestehen.
+- Kartenfenster mit Höhe 0 durch das MapLibre-Stylesheet.
+
 ## 0.5.0 – 21.11.2026 – Phase 5: Einsatzmittelvorschlag
 
 ### Hinzugefügt

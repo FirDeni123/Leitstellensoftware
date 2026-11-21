@@ -8,6 +8,10 @@ import * as md from './masterdata/configs';
 import { AlarmRulesPanel } from './alarming/AlarmRulesPanel';
 import { AlarmsPanel } from './alarming/AlarmsPanel';
 import { InterfacesPanel } from './alarming/InterfacesPanel';
+import { StatusBoardPanel } from './fleet/StatusBoardPanel';
+import { TalkRequestsPanel } from './fleet/TalkRequestsPanel';
+import { VehiclesPanel } from './fleet/VehiclesPanel';
+import { MapPanel } from './map/MapPanel';
 import { ActiveCallsPanel } from './operations/ActiveCallsPanel';
 import { ProposalSettingsPanel } from './proposal/ProposalSettingsPanel';
 import { CallsPanel } from './operations/CallsPanel';
@@ -30,6 +34,10 @@ const IMPLEMENTED: Record<string, () => ReactNode> = {
   'alarm-rules': () => <AlarmRulesPanel />,
   interfaces: () => <InterfacesPanel />,
   'proposal-settings': () => <ProposalSettingsPanel />,
+  map: () => <MapPanel />,
+  vehicles: () => <VehiclesPanel />,
+  'status-board': () => <StatusBoardPanel />,
+  'talk-requests': () => <TalkRequestsPanel />,
   keywords: () => <CrudPanel config={md.KEYWORDS} />,
   stations: () => <CrudPanel config={md.STATIONS} />,
   'vehicle-admin': () => <CrudPanel config={md.VEHICLES} />,

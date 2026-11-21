@@ -1,8 +1,8 @@
 /** Aktuelle Einsätze: list of incidents and the incident detail (status, data, vehicles, history). */
 import { useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ApiError, describeError } from '@/api/http';
-import { useActiveAssignments, useAlarms, useIncident, useIncidentEvents, useIncidents, useList, usePoliceNotices } from '@/api/queries';
+import { useActiveAssignments, useAlarms, useFleet, useIncident, useIncidentEvents, useIncidents, useList, usePoliceNotices } from '@/api/queries';
 import type { Incident, IncidentStatus, IncidentType, Keyword, Vehicle } from '@/api/types';
 import { EmptyState, ErrorAlert, Field, fmtDateTime, fmtTime, Modal } from '@/components/common';
 import { MultiSelect } from '@/components/MultiSelect';
@@ -13,6 +13,9 @@ import { useActiveControlCenter } from '@/state/workContext';
 import { AlarmDialog } from '../alarming/AlarmDialog';
 import { AlarmProtocol } from '../alarming/AlarmProtocol';
 import { ProposalDialog } from '../proposal/ProposalDialog';
+import { fmtEta, useLivePositions } from '../fleet/live';
+import { StatusBadge } from '../fleet/StatusControls';
+import { useMapPick } from '../map/pick';
 import { usePoliceNoticeQueue } from '../alarming/policeNotices';
 import { ControlCenterBadge } from '../crud/CrudPanel';
 import { parseNumber } from '../crud/fields';
@@ -114,6 +117,14 @@ function IncidentView({ incident }: { incident: Incident }): ReactNode {
   const canWrite = hasPermission(me, 'incidents.write') && incident.status !== 'closed';
   const canClose = hasPermission(me, 'incidents.close');
   const set = (patch: Partial<IncidentForm>) => setForm((f) => ({ ...f, ...patch }));
+  // location picked on the map -> into the form (saved by the dispatcher as usual)
+  const picked = useMapPick((s) => (s.result?.incidentId === incident.id ? s.result : null));
+  useEffect(() => {
+    if (!picked) return;
+    setForm((f) => ({ ...f, latitude: String(picked.lat), longitude: String(picked.lon) }));
+    useMapPick.getState().consume();
+  }, [picked, setForm]);
+  const picking = useMapPick((s) => s.mode?.kind === 'incident-location' && s.mode.incidentId === incident.id);
   const refresh = () => qc.invalidateQueries({ queryKey: ['incidents'] });
 
   const save = async () => {
@@ -170,7 +181,7 @@ function IncidentView({ incident }: { incident: Incident }): ReactNode {
         ))}
       </div>
       <div className="muted" style={{ fontSize: 'var(--fs-xs)', marginTop: 4 }}>
-        „Alarmiert“ setzt die Alarmierung; „Anfahrt“ und „Am Einsatzort“ werden ab Phase 6 aus dem Fahrzeugstatus übernommen.
+        „Alarmiert“ setzt die Alarmierung; „Anfahrt“ und „Am Einsatzort“ folgen aus dem Fahrzeugstatus 3 und 4.
       </div>
       <PoliceNoticeBanner incident={incident} />
 
@@ -198,6 +209,15 @@ function IncidentView({ incident }: { incident: Incident }): ReactNode {
         <Field label="Ortshinweis" className="full"><input className="input" value={form.location_note} disabled={!canWrite} placeholder="z. B. Parkplatz hinter dem Bahnhof" onChange={(e) => set({ location_note: e.target.value })} /></Field>
         <Field label="Breitengrad"><input className="input tabular" value={form.latitude} disabled={!canWrite} onChange={(e) => set({ latitude: e.target.value })} /></Field>
         <Field label="Längengrad"><input className="input tabular" value={form.longitude} disabled={!canWrite} onChange={(e) => set({ longitude: e.target.value })} /></Field>
+        {canWrite && (
+          <div className="field full" style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+            <button type="button" className={`btn sm ${picking ? 'primary' : ''}`}
+              onClick={() => (picking ? useMapPick.getState().cancel() : useMapPick.getState().start({ kind: 'incident-location', incidentId: incident.id, label: incident.number }))}>
+              {picking ? 'Ortswahl abbrechen' : 'Einsatzort auf der Karte wählen'}
+            </button>
+            {picking && <span className="muted" style={{ fontSize: 'var(--fs-xs)' }}>Im Fenster „Karte“ auf den Einsatzort klicken, danach speichern.</span>}
+          </div>
+        )}
         <Field label="Meldender"><input className="input" value={form.caller_name} disabled={!canWrite} onChange={(e) => set({ caller_name: e.target.value })} /></Field>
         <Field label="Rückrufnummer"><input className="input mono" value={form.caller_phone} disabled={!canWrite} onChange={(e) => set({ caller_phone: e.target.value })} /></Field>
         <Field label="Beschreibung / Lage" className="full"><textarea className="input" style={{ height: 60, padding: 8 }} value={form.description} disabled={!canWrite} onChange={(e) => set({ description: e.target.value })} /></Field>
@@ -251,6 +271,9 @@ function VehiclesSection({ incident }: { incident: Incident }): ReactNode {
   const [proposing, setProposing] = useState(false);
   const canWrite = hasPermission(me, 'incidents.write') && !['finished', 'closed'].includes(incident.status);
   const activeAssignments = incident.assignments.filter((a) => a.released_at === null);
+  const fleet = useFleet(incident.control_center_id);
+  const live = useLivePositions((s) => s.byId);
+  const fleetById = useMemo(() => new Map((fleet.data ?? []).map((v) => [v.id, v])), [fleet.data]);
   const released = incident.assignments.filter((a) => a.released_at !== null);
   const busy = useMemo(() => new Map((assignments.data ?? []).map((a) => [a.vehicle_id, a])), [assignments.data]);
   const options = useMemo(() => (vehicles.data ?? [])
@@ -302,7 +325,12 @@ function VehiclesSection({ incident }: { incident: Incident }): ReactNode {
           <span style={{ fontWeight: 600 }}>{a.vehicle.call_sign}</span>
           <span className="badge mono">{a.vehicle.vehicle_type}</span>
           <span className="muted">{a.vehicle.station}</span>
-          <span className="muted tabular" style={{ marginLeft: 'auto' }}>seit {fmtTime(a.assigned_at)} ({elapsed(a.assigned_at, now)})</span>
+          {fleetById.get(a.vehicle.id) && <StatusBadge code={fleetById.get(a.vehicle.id)!.status_code} />}
+          <span className="muted tabular" style={{ marginLeft: 'auto' }}>
+            {a.s4_at ? `S4 ${fmtTime(a.s4_at)}` : a.s3_at ? `S3 ${fmtTime(a.s3_at)}${live[a.vehicle.id] ? ` · ETA ${fmtEta(live[a.vehicle.id]!.eta_s)}` : ''}`
+              : a.alarmed_at ? `alarmiert ${fmtTime(a.alarmed_at)}${fleetById.get(a.vehicle.id)?.planned_departure_s != null ? ` · rückt aus in ${fmtEta(fleetById.get(a.vehicle.id)!.planned_departure_s)}` : ''}`
+                : `seit ${fmtTime(a.assigned_at)} (${elapsed(a.assigned_at, now)})`}
+          </span>
           {canWrite && <button className="btn ghost sm" onClick={() => void release(a.vehicle.id)}>Freigeben</button>}
         </div>
       ))}

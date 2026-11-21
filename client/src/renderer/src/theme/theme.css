@@ -295,3 +295,41 @@ table.data.compact td, table.data.compact th { padding-top: 2px; padding-bottom:
 .reasons { margin: 2px 0 0 0; padding-left: 16px; color: var(--text-2); font-size: var(--fs-xs); }
 .reasons li { margin: 1px 0; }
 .timeline-item.kind-proposal_accepted span:nth-child(2) { color: #b9e7c9; }
+
+/* ---- Phase 6: map, fleet, status board, talk requests ------------------------------------ */
+.map-wrap { position: relative; flex: 1; min-height: 0; }
+.map, .map-wrap > .map.maplibregl-map { position: absolute; inset: 0; background: #151b24; } /* beats maplibre-gl.css */
+.map.picking { cursor: crosshair; }
+.map.picking .maplibregl-canvas { cursor: crosshair; }
+.map-pick { display: flex; align-items: center; gap: 8px; margin: 4px 8px; }
+.map-station { width: 18px; height: 18px; border-radius: 4px; background: #2a3446; border: 1px solid #8fa3bf; color: #cfe1ff; font-size: 12px; line-height: 16px; text-align: center; }
+.map-incident { min-width: 22px; height: 22px; padding: 0 4px; border-radius: 11px; background: #ef4f55; color: #fff; border: 2px solid #fff; font-size: 11px; line-height: 18px; text-align: center; box-shadow: 0 0 0 3px rgba(239, 79, 85, 0.35); }
+.map-incident.prio-2 { background: #f2a93b; box-shadow: 0 0 0 3px rgba(242, 169, 59, 0.3); }
+.map-incident.prio-3 { background: #3d8bfd; box-shadow: none; }
+.map-vehicle { display: flex; align-items: center; gap: 3px; cursor: pointer; white-space: nowrap; }
+.map-vehicle i { display: inline-block; min-width: 16px; height: 16px; border-radius: 3px; color: #111; font-style: normal; font-size: 10px; font-weight: 700; line-height: 16px; text-align: center; border: 1px solid rgba(0, 0, 0, 0.5); }
+.map-vehicle span { font-size: 10px; padding: 0 3px; border-radius: 3px; background: rgba(13, 18, 26, 0.78); color: #e4e7eb; }
+.map-vehicle.moving i { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85); }
+.map-vehicle.selected span { background: #3d8bfd; color: #fff; }
+.map-card { position: absolute; left: 10px; bottom: 30px; z-index: 5; min-width: 240px; padding: 8px 10px; border-radius: 6px; background: var(--bg-2, #1d2431); border: 1px solid var(--line); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4); font-size: var(--fs-sm); }
+.sim-clock { display: flex; gap: 4px; align-items: center; }
+.sim-clock .select { width: auto; }
+.status-select { width: 140px; height: 24px; font-size: var(--fs-xs); }
+.status-summary { display: flex; gap: 4px; flex-wrap: wrap; margin-left: 8px; }
+.board-group { margin-bottom: 10px; }
+.board-title { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-2); margin-bottom: 4px; }
+.board-tiles { display: flex; flex-wrap: wrap; gap: 4px; }
+.board-tile { display: flex; align-items: center; gap: 5px; padding: 2px 6px 2px 2px; border-radius: 4px; border: 2px solid; background: var(--bg-1, #151b24); color: inherit; font: inherit; font-size: var(--fs-xs); cursor: pointer; }
+.board-tile.selected { outline: 2px solid #3d8bfd; }
+.board-code { min-width: 18px; text-align: center; border-radius: 2px; font-weight: 700; }
+.board-talk { font-size: 9px; padding: 0 3px; border-radius: 3px; background: #3d8bfd; color: #fff; }
+.board-talk.urgent, .fms-urgent { background: #ff2d55 !important; color: #fff; animation: blink 1s steps(2, start) infinite; }
+.board-action { display: flex; gap: 8px; align-items: center; padding: 6px 10px; border-top: 1px solid var(--line); }
+.talk-request { display: flex; gap: 8px; align-items: center; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+.talk-request.urgent { background: rgba(255, 45, 85, 0.12); }
+.talk-request.state-accepted { background: rgba(57, 194, 122, 0.1); }
+.badge.blink { animation: blink 1s steps(2, start) infinite; }
+@keyframes blink { to { visibility: hidden; } }
+.timeline-item.kind-vehicle_arrived span:nth-child(2) { color: #9ee6b8; }
+.timeline-item.kind-talk_request span:nth-child(2) { color: #b9d4ff; }
+.fms.wide { width: auto; padding: 0 6px; }

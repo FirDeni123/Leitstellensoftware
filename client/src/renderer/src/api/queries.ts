@@ -7,7 +7,8 @@ import { onRealtimeEvent, onResync, useSession } from '@/state/session';
 import { ApiClient, ApiError } from './http';
 import type {
   ActiveAssignment, Alarm, AlarmRule, AuditPage, Call, ControlCenter, Incident, IncidentEvent, IncidentSummary, InterfaceEventItem,
-  InterfaceItem, LoginEvent, Page, Permission, PluginInfo, PoliceNotice, ProposalSettings, Role, SystemInfo, User,
+  FleetVehicle, InterfaceItem, LoginEvent, MapConfig, Movement, Page, Permission, PluginInfo, PoliceNotice, ProposalSettings, Role,
+  SimulationClock, StatusDefinition, StatusHistoryEntry, SystemInfo, TalkRequest, User,
 } from './types';
 
 export const queryClient = new QueryClient({
@@ -34,26 +35,70 @@ export const TOPIC_INVALIDATIONS: Record<string, readonly (readonly string[])[]>
   'alarm.changed': [['alarms'], ['incident-events'], ['incidents']],
   'police_notice.changed': [['police-notices'], ['alarms'], ['incident-events']],
   'interface.changed': [['interfaces'], ['interface-events']],
+  'vehicle.status_changed': [['fleet'], ['incidents'], ['active-assignments'], ['status-history'], ['movements']],
+  'movement.changed': [['movements'], ['fleet']],
+  'talk_request.changed': [['talk-requests'], ['fleet'], ['incident-events']],
+  'simulation.clock_changed': [['simulation-clock']],
 };
 
 export function keysForTopic(topic: string): readonly (readonly string[])[] {
   return TOPIC_INVALIDATIONS[topic] ?? [];
 }
 
+/**
+ * Coalesces realtime invalidations per query key: events within `delayMs` are merged, a
+ * running refetch is never cancelled (cancelling under a steady stream of events would starve
+ * the query), and if more events arrive while it runs, exactly one more refetch follows.
+ */
+export function createInvalidationScheduler(
+  invalidate: (key: readonly string[]) => Promise<unknown>,
+  delayMs = 200,
+): { request(key: readonly string[]): void; dispose(): void } {
+  const state = new Map<string, { timer: ReturnType<typeof setTimeout> | null; dirty: boolean; running: boolean }>();
+  const flush = async (id: string, key: readonly string[]) => {
+    const entry = state.get(id)!;
+    entry.timer = null;
+    if (!entry.dirty) return;
+    entry.dirty = false;
+    entry.running = true;
+    try {
+      await invalidate(key);
+    } catch {
+      /* errors surface in the query itself */
+    } finally {
+      entry.running = false;
+    }
+    if (entry.dirty && !entry.timer) entry.timer = setTimeout(() => void flush(id, key), delayMs);
+  };
+  return {
+    request(key) {
+      const id = JSON.stringify(key);
+      const entry = state.get(id) ?? { timer: null, dirty: false, running: false };
+      state.set(id, entry);
+      entry.dirty = true;
+      if (!entry.timer && !entry.running) entry.timer = setTimeout(() => void flush(id, key), delayMs);
+    },
+    dispose() {
+      for (const entry of state.values()) if (entry.timer) clearTimeout(entry.timer);
+      state.clear();
+    },
+  };
+}
+
 export function installRealtimeInvalidation(client: QueryClient): () => void {
+  const scheduler = createInvalidationScheduler((key) => client.invalidateQueries({ queryKey: key }, { cancelRefetch: false }));
   const offEvent = onRealtimeEvent((event) => {
-    for (const key of keysForTopic(event.topic)) void client.invalidateQueries({ queryKey: key });
+    for (const key of keysForTopic(event.topic)) scheduler.request(key);
     // Generic master data event: the payload names the affected collection.
     const collection = event.data['collection'];
-    if (event.topic === 'master_data.changed' && typeof collection === 'string') {
-      void client.invalidateQueries({ queryKey: [collection] });
-    }
+    if (event.topic === 'master_data.changed' && typeof collection === 'string') scheduler.request([collection]);
   });
   // After a reconnect everything might be stale.
   const offResync = onResync(() => void client.invalidateQueries());
   return () => {
     offEvent();
     offResync();
+    scheduler.dispose();
   };
 }
 
@@ -216,4 +261,62 @@ export function useProposalSettings(controlCenterId: string | undefined) {
     queryFn: () => api.get<ProposalSettings>('/proposal-settings', { control_center_id: controlCenterId }),
     enabled: !!controlCenterId,
   });
+}
+
+// ------------------------------------------------------------------- Phase 6: fleet & map
+export function useFleet(controlCenterId: string | undefined) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['fleet', controlCenterId],
+    queryFn: () => api.get<FleetVehicle[]>('/fleet', { control_center_id: controlCenterId }),
+    enabled: !!controlCenterId,
+    staleTime: 10_000,
+  });
+}
+
+export function useMovements(controlCenterId: string | undefined) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['movements', controlCenterId],
+    queryFn: () => api.get<Movement[]>('/movements', { control_center_id: controlCenterId }),
+    enabled: !!controlCenterId,
+  });
+}
+
+export function useStatusDefinitions() {
+  const api = useApi();
+  return useQuery({ queryKey: ['vehicle-status'], queryFn: () => api.get<StatusDefinition[]>('/vehicle-status-definitions'), staleTime: 60_000 });
+}
+
+export function useStatusHistory(vehicleId: string | null) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['status-history', vehicleId],
+    queryFn: () => api.get<StatusHistoryEntry[]>(`/vehicles/${vehicleId}/status-history`, { limit: 50 }),
+    enabled: !!vehicleId,
+  });
+}
+
+export function useTalkRequests(controlCenterId: string | undefined, enabled = true) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['talk-requests', controlCenterId],
+    queryFn: () => api.get<TalkRequest[]>('/talk-requests', { control_center_id: controlCenterId }),
+    enabled: enabled && !!controlCenterId,
+    staleTime: 5_000,
+  });
+}
+
+export function useMapConfig(controlCenterId: string | undefined) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['map-config', controlCenterId],
+    queryFn: () => api.get<MapConfig>('/map/config', { control_center_id: controlCenterId }),
+    staleTime: Infinity,
+  });
+}
+
+export function useSimulationClock() {
+  const api = useApi();
+  return useQuery({ queryKey: ['simulation-clock'], queryFn: () => api.get<SimulationClock>('/simulation/clock') });
 }

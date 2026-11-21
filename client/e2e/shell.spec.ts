@@ -21,14 +21,16 @@ test('login page clearly shows simulation mode and rejects wrong passwords', asy
   await expect(page.getByRole('alert')).toContainText('Benutzername oder Passwort falsch');
 });
 
-test('dispatcher workstation with honest placeholders and live connection', async ({ page }) => {
+test('dispatcher workstation with map and live connection', async ({ page }) => {
   await login(page, 'dispo.demo');
   await expect(page.getByRole('status').filter({ hasText: 'SIMULATIONSBETRIEB' })).toBeVisible();
   await expect(page.getByText('Echtzeit verbunden')).toBeVisible({ timeout: 10_000 });
   await expect(workstation(page, /Disposition/)).toBeVisible();
   // Dispatchers must not see the administrator workstation.
   await expect(workstation(page, /Administrator/)).toHaveCount(0);
-  await expect(page.getByText('Noch nicht implementiert').first()).toBeVisible();
+  // all windows of the dispatcher workstation are implemented (phase 6): the map is there
+  await expect(page.getByTestId('map')).toBeVisible();
+  await expect(page.getByText('Noch nicht implementiert')).toHaveCount(0);
   if (SHOTS) await page.screenshot({ path: `${SHOTS}/02-disposition.png` });
   await page.keyboard.press('F2');
   await expect(workstation(page, /Einsatzannahme/)).toHaveClass(/active/);

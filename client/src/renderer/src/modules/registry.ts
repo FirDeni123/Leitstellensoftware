@@ -48,24 +48,11 @@ export const PANELS: readonly PanelDefinition[] = [
   { id: 'interfaces', title: 'Schnittstellen', permission: 'interfaces.read', phase: 4, implemented: true },
   // ---- implemented in phase 5 (Einsatzmittelvorschlag) -----------------------------------
   { id: 'proposal-settings', title: 'Vorschlagsregeln', permission: 'master_data.read', phase: 5, implemented: true },
-  // ---- planned modules (transparently marked) -------------------------------------------
-  {
-    id: 'talk-requests', title: 'Sprechwünsche', permission: 'radio.handle', phase: 6, implemented: false,
-    scope: ['Sprechwünsche nach Priorität', 'Annehmen, zurückstellen, ablehnen', 'Dokumentation mit Zeitstempel'],
-  },
-  {
-    id: 'vehicles', title: 'Fahrzeugübersicht', permission: 'incidents.read', phase: 6, implemented: false,
-    scope: ['Alle Fahrzeuge mit Status, Wache, Position', 'Filter nach Organisation und Wache'],
-  },
-  {
-    id: 'status-board', title: 'Statusübersicht', permission: 'incidents.read', phase: 6, implemented: false,
-    scope: ['FMS-Status 1–6 je Wache (Statustableau)', 'Statushistorie'],
-  },
-  {
-    id: 'map', title: 'Karte', phase: 6, implemented: false,
-    scope: ['OpenStreetMap-Karte mit Wachen, Fahrzeugen, Einsatzorten', 'Straßenbasierte Routen (OSRM)',
-      'GPS-Simulation in Echtzeit'],
-  },
+  // ---- implemented in phase 6 (fleet, map, simulation) -----------------------------------
+  { id: 'map', title: 'Karte', permission: 'incidents.read', phase: 6, implemented: true },
+  { id: 'vehicles', title: 'Fahrzeugübersicht', permission: 'incidents.read', phase: 6, implemented: true },
+  { id: 'status-board', title: 'Statusübersicht', permission: 'incidents.read', phase: 6, implemented: true },
+  { id: 'talk-requests', title: 'Sprechwünsche', permission: 'radio.handle', phase: 6, implemented: true },
 ];
 
 export const PANEL_BY_ID = new Map(PANELS.map((p) => [p.id, p]));

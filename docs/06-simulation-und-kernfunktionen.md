@@ -2,8 +2,9 @@
 
 Dieses Dokument plant die drei zusätzlichen Kernfunktionen (Einsatzmittelvorschlag,
 KI-Anrufsimulation, Navigation/GPS-Simulation) sowie Telefonie und Sprache. Der
-**Einsatzmittelvorschlag ist seit 0.5.0 umgesetzt** (Abschnitt 3, mit Umsetzungsstand);
-alles Weitere ist noch nicht implementiert (Phasen 6–7). Die Architektur aus Phase 1 (Event-Bus,
+**Einsatzmittelvorschlag ist seit 0.5.0 umgesetzt** (Abschnitt 3), **Navigation und
+Bewegungssimulation seit 0.6.0** (Abschnitt 2, jeweils mit Umsetzungsstand); KI-Anrufsimulation
+und Sprache folgen in Phase 7. Die Architektur aus Phase 1 (Event-Bus,
 Unit of Work, Provider-Interfaces, Modul-Registry) ist darauf ausgelegt.
 
 ## 1. Simulationsgrundsätze
@@ -62,6 +63,27 @@ Disponent alarmiert → Fahrzeug Status 3 (Service)
 - **Echte GPS-Daten später:** Ein Plugin implementiert `PositionSource` (z. B. für
   Fahrzeugortung über eine Flottenmanagement-API). Je Fahrzeug wird `position_source`
   festgelegt, und der Simulationsdienst bewegt nur Fahrzeuge mit `sim`.
+
+### Umsetzungsstand (0.6.0)
+
+- **Umgesetzt:** OSRM-Anbindung (`route` für Fahrten, `table` für den Vorschlag) mit
+  gekennzeichnetem Rückfall auf die Luftlinie; Sonderrechtsfaktor (global je Leitstelle);
+  Bewegung als Interpolation entlang der Route mit Zeitprofil je Teilstück; Simulationsuhr
+  mit Pause und Zeitraffer; gebündeltes `vehicle.positions`-Ereignis je Leitstelle im
+  1-Hz-Takt; neustartsicher (Position = Funktion aus Route und Simulationszeit); Leader-Lock;
+  Ausrücken nach Alarmierung (Ausrückzeit), Ankunft S4 mit Einsatzverlauf, Rückfahrt S1→S2;
+  Ausfall (S6), Verschieben; Karte (MapLibre) mit Wachen, Fahrzeugen, Einsätzen, Routen
+  (Luftlinie gestrichelt) und Einsatzort per Klick.
+- **Abweichungen:** Die Route wird erst bei Abfahrt berechnet (vom dann aktuellen Standort);
+  der Sonderrechtsfaktor gilt einheitlich (noch nicht je Fahrzeugtyp/Straßenklasse); Fahrzeug-
+  und Wachenmarker sind HTML-Marker (bei sehr vielen Fahrzeugen an einer Wache überlagern
+  sich Beschriftungen – Bündelung folgt); zurückgelegte Strecken werden nicht gespeichert.
+- **Messwerte (Testumgebung):** laufender Takt mit 50 fahrenden Fahrzeugen 42 ms;
+  50 gleichzeitige Abfahrten in einem Takt ca. 1,1 s (Statuswechsel, Historie,
+  Einsatzverlauf je Fahrzeug – einmalig, der Takt verzögert sich dann kurz).
+- **Nicht in dieser Umgebung geprüft:** ein echter OSRM-Dienst (kein Docker) und die
+  OSM-Kachelserver (kein Zugriff); die Kachelanzeige ist mit einem lokalen Testkachelserver
+  unter der strengen CSP geprüft.
 
 ### Karte
 

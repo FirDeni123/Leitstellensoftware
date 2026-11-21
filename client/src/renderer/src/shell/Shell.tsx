@@ -5,6 +5,7 @@ import { ChangePasswordForm } from '@/auth/ChangePasswordForm';
 import { Modal } from '@/components/common';
 import { DockArea } from '@/layout/DockArea';
 import { PoliceNoticePopup } from '@/modules/alarming/PoliceNoticePopup';
+import { installPositionUpdates } from '@/modules/fleet/live';
 import { installCallAlert } from '@/modules/operations/callAlert';
 import { availableWorkstations } from '@/layout/workstations';
 import { sysmsg } from '@/state/messages';
@@ -30,6 +31,7 @@ export function Shell(): ReactNode {
   }, [info.data, info.error, setSystemInfo]);
 
   useEffect(() => installCallAlert(), []);
+  useEffect(() => installPositionUpdates(), []);
 
   useEffect(
     () =>
