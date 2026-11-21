@@ -39,6 +39,7 @@ DEMO_CONTROL_CENTER = {
 }
 
 DEMO_USERS = (
+    ("admin.demo", "Administrator Demo", "admin"),
     ("lead.demo", "Leitstellenleitung Demo", "lead"),
     ("dispo.demo", "Disponent Demo", "dispatcher"),
     ("annahme.demo", "Einsatzbearbeiter Demo", "call_taker"),

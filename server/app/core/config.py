@@ -40,7 +40,11 @@ class Settings(BaseSettings):
     redis_url: str | None = None
 
     # --- HTTP -----------------------------------------------------------------------------
-    cors_origins: list[str] = Field(default_factory=lambda: ["http://localhost:5173"])
+    # app://ils is the origin of the packaged Windows client; localhost ports are the
+    # renderer dev server (5173) and the web preview used by end-to-end tests (4173).
+    cors_origins: list[str] = Field(
+        default_factory=lambda: ["app://ils", "http://localhost:5173", "http://localhost:4173"]
+    )
     # Number of reverse proxies in front of the app whose X-Forwarded-For can be trusted.
     trusted_proxy_count: int = 0
 

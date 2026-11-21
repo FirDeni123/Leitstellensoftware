@@ -1,0 +1,76 @@
+/**
+ * Workstation profiles (Arbeitsplätze). Each profile defines which permission is needed
+ * and the default window arrangement. Users can rearrange freely; their layout is stored
+ * per workstation on the server.
+ */
+import { canOpenPanel, PANEL_BY_ID } from '@/modules/registry';
+
+export type WorkstationKey = 'call_taking' | 'dispatch' | 'radio' | 'management' | 'admin';
+
+/** Default layout description: columns of tab groups (first panel of a group is active). */
+export interface DefaultLayout {
+  columns: { groups: string[][] }[];
+}
+
+export interface Workstation {
+  key: WorkstationKey;
+  title: string;
+  shortcut: string;
+  permission: string;
+  layout: DefaultLayout;
+}
+
+export const WORKSTATIONS: readonly Workstation[] = [
+  {
+    key: 'call_taking', title: 'Einsatzannahme', shortcut: 'F2', permission: 'calls.handle',
+    layout: { columns: [
+      { groups: [['emergency-calls', 'active-calls'], ['incidents']] },
+      { groups: [['map'], ['system-messages', 'module-status']] },
+    ] },
+  },
+  {
+    key: 'dispatch', title: 'Disposition', shortcut: 'F3', permission: 'incidents.write',
+    layout: { columns: [
+      { groups: [['incidents'], ['alarms', 'audit-log']] },
+      { groups: [['map'], ['vehicles', 'status-board']] },
+      { groups: [['talk-requests'], ['system-messages', 'module-status']] },
+    ] },
+  },
+  {
+    key: 'radio', title: 'Funk', shortcut: 'F4', permission: 'radio.handle',
+    layout: { columns: [
+      { groups: [['talk-requests'], ['radio-groups']] },
+      { groups: [['status-board', 'vehicles'], ['system-messages']] },
+    ] },
+  },
+  {
+    key: 'management', title: 'Verwaltung', shortcut: 'F5', permission: 'control_centers.read',
+    layout: { columns: [
+      { groups: [['control-centers'], ['audit-log']] },
+      { groups: [['module-status'], ['system-messages']] },
+    ] },
+  },
+  {
+    key: 'admin', title: 'Administrator', shortcut: 'F6', permission: 'system.admin',
+    layout: { columns: [
+      { groups: [['users', 'control-centers']] },
+      { groups: [['audit-log'], ['module-status', 'system-messages']] },
+    ] },
+  },
+];
+
+export function availableWorkstations(permissions: readonly string[]): Workstation[] {
+  return WORKSTATIONS.filter((w) => permissions.includes(w.permission));
+}
+
+/** Default layout reduced to the panels the user may open. */
+export function permittedLayout(ws: Workstation, permissions: readonly string[]): DefaultLayout {
+  const allowed = (id: string) => {
+    const def = PANEL_BY_ID.get(id);
+    return !!def && canOpenPanel(def, permissions);
+  };
+  const columns = ws.layout.columns
+    .map((c) => ({ groups: c.groups.map((g) => g.filter(allowed)).filter((g) => g.length > 0) }))
+    .filter((c) => c.groups.length > 0);
+  return { columns: columns.length ? columns : [{ groups: [['system-messages']] }] };
+}

@@ -1,0 +1,21 @@
+# Windows installer (NSIS). Build on Windows or in CI (see .github/workflows/client.yml):
+#   npm run dist:win
+appId: de.ils-sim.client
+productName: ILS-Sim Leitstelle
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**/*
+  - package.json
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: ILS-Sim-Setup-${version}.${ext}
+nsis:
+  oneClick: false
+  perMachine: true
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  shortcutName: ILS-Sim Leitstelle
