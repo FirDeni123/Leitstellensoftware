@@ -5,8 +5,7 @@
 **Testergebnis zuletzt:** Server 105/105 ✅ · Client-Unit 35/35 ✅ · E2E 9/9 ✅ (dreimal in Folge) ·
 Ruff ✅ · TypeScript ✅ · `alembic check` ✅
 
-> **Wichtig:** Der Code liegt bisher nur in dieser Cloud-Umgebung (lokales Git-Repository
-> ohne Remote). Für eine dauerhafte Sicherung bitte ein GitHub-Repository nennen.
+**Repository:** https://github.com/FirDeni123/Leitstellensoftware (Branch `main`).
 
 ## Phase 4 – Alarmierung (umgesetzt und getestet)
 
