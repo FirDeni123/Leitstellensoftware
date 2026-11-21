@@ -53,7 +53,7 @@ test('admin changes a user – second session sees it live', async ({ browser })
   const nameField = admin.getByLabel('Anzeigename');
   const newName = `Beobachter Demo ${Date.now() % 10000}`;
   await nameField.fill(newName);
-  await admin.getByRole('button', { name: 'Speichern' }).click();
+  await admin.getByRole('tabpanel', { name: 'Benutzerverwaltung' }).getByRole('button', { name: 'Speichern' }).click();
   await expect(admin.getByRole('cell', { name: newName })).toBeVisible();
   if (SHOTS) await admin.screenshot({ path: `${SHOTS}/03-admin-benutzer.png` });
 

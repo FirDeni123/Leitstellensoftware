@@ -232,6 +232,35 @@ Recht `training.instructor`. Der Ausbilder kann Szenarien auswählen oder erstel
 Gespräch live mitverfolgen (Transkript per Echtzeit-Event), Ereignisse einspielen (z. B.
 „Anrufer wird panisch“), die Auswertung ergänzen und Berichte erstellen.
 
+### Umsetzungsstand (0.7.0)
+
+Umgesetzt wie oben beschrieben, mit folgenden **Abweichungen vom Plan**:
+
+| Geplant | Umgesetzt |
+|---|---|
+| Audio-WebSocket, VAD, Unterbrechen, Piper auf dem Server | **Text-Gespräch** mit satzweise gestreamten Antworten (Echtzeit-Ereignis je Satz). Sprachausgabe im Client mit den Stimmen des Betriebssystems; **Sprechtaste** schickt eine Aufnahme an den Server (faster-whisper, optional). Piper, Audio-Streaming, Sprechpausenerkennung und Unterbrechen fehlen noch |
+| Zustandsobjekt „genannte Fakten“ | Die Auswertung bewertet den Gesprächsverlauf direkt (Claude mit strukturierter Ausgabe oder Schlüsselwörter) |
+| Zufallsgenerator mit OSM-Adressen, zulässige Alternativ-Stichworte, Berichtsexport | noch nicht umgesetzt; vier feste Demo-Szenarien |
+| Modell in der Schnittstellenverwaltung | eigenes Fenster „KI-Einstellungen“ (Administrator) |
+
+**Ablauf einer Antwort:** Beitrag speichern → Hintergrundaufgabe holt sich je Übung eine
+PostgreSQL-Sperre (mehrere Server-Prozesse antworten nie doppelt) → offene Regieanweisungen
+werden als Systemnachricht direkt vor die Antwort gesetzt → Claude streamt → jeder fertige Satz
+geht sofort an Client und Ausbilder → die vollständige Antwort wird mit `latency_ms`
+gespeichert. Der Systemprompt (Rollenregeln, Persona, Fakten) ist je Übung unveränderlich, der
+Verlauf wird nur angehängt – so greift das Prompt-Caching. Ohne Schlüssel, bei Netzwerk- oder
+Ratenfehlern und bei Ablehnung antwortet der regelbasierte Anrufer; eine Systemzeile im
+Verlauf sagt das. Antwortet das Ausweichmodell, steht das ebenfalls im Verlauf.
+
+**Schwierigkeitsgrad:** steuert den Anrufer (leicht: kooperativ; mittel: aufgeregt; schwer:
+panisch, ungenau) und was das Telefon übermittelt (leicht: Rufnummer und Standort; mittel:
+Rufnummer; schwer: unterdrückt).
+
+**Auswertung:** Handlungen werden immer aus den Systemdaten geprüft (Einsatz am
+Trainings-Notruf, Stichwort = erwartetes, Einsatzort ≤ 300 m oder gleiche Straße mit
+Hausnummer, mindestens eine Alarmierung). Gesprächspunkte stammen aus der Checkliste des
+Szenarios oder einer Standardliste. Ergebnis = Anteil erfüllter Pflichtpunkte.
+
 ## 5. Telefonie (Phase 3 Simulation, Phase 7 Sprache, später VoIP)
 
 | Provider | Zweck | Umsetzung |

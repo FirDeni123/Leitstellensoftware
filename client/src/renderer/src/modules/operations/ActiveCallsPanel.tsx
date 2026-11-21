@@ -24,7 +24,7 @@ export function ActiveCallsPanel(): ReactNode {
                 <tr key={c.id}>
                   <td><span className={`badge ${CALL_STATUS[c.status].cls}`}>{CALL_STATUS[c.status].label}</span></td>
                   <td>{c.handled_by_name}</td>
-                  <td>{c.source === 'sim' && <span className="badge sim-badge">SIM</span>} <span className="mono">{c.caller_phone ?? 'unterdrückt'}</span></td>
+                  <td>{c.source === 'sim' && <span className="badge sim-badge">SIM</span>}{c.source === 'training' && <span className="badge sim-badge" title="Übungsanruf (Ausbildung)">ÜBUNG</span>} <span className="mono">{c.caller_phone ?? 'unterdrückt'}</span></td>
                   <td className="tabular">{c.answered_at ? elapsed(c.answered_at, now) : '–'}</td>
                   <td className="mono">{c.incident?.number ?? '–'}</td>
                 </tr>

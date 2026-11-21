@@ -67,6 +67,7 @@ export function DockArea({ workstation }: { workstation: Workstation }): ReactNo
   const dockRef = useRef<DockviewApi | null>(null);
   const versionRef = useRef<number | null>(null);
   const loadingRef = useRef(true);
+  const pendingOpen = useRef<string[]>([]);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const permsRef = useRef(permissions);
   permsRef.current = permissions;
@@ -137,6 +138,8 @@ export function DockArea({ workstation }: { workstation: Workstation }): ReactNo
       applyDefaultLayout(dock, permittedLayout(workstation, permsRef.current));
     } finally {
       loadingRef.current = false;
+      const pending = pendingOpen.current.splice(0);
+      for (const id of pending) useLayoutActions.getState().openPanel(id);
     }
   }, [api, path, removeForbidden, workstation]);
 
@@ -159,7 +162,11 @@ export function DockArea({ workstation }: { workstation: Workstation }): ReactNo
       openPanel: (id: string) => {
         const dock = dockRef.current;
         const def = PANEL_BY_ID.get(id);
-        if (!dock || !def) return;
+        if (!def) return;
+        if (!dock || loadingRef.current) {
+          pendingOpen.current.push(id); // opened after the stored layout has been applied
+          return;
+        }
         const existing = dock.getPanel(id);
         if (existing) {
           existing.api.setActive();

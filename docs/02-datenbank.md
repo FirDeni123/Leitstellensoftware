@@ -128,15 +128,18 @@ und nach einem Neustart rekonstruierbar. Gespeichert wird die Position beim Halt
 Nicht umgesetzt: `vehicle_tracks` (zurückgelegte Strecken als Historie) – folgt bei Bedarf
 mit der Auswertung (Phase 7).
 
-### Phase 7 – Telefonie, Sprache und Training
+### Phase 7 – Ausbildung und KI-Anrufer (umgesetzt, Migration `0007`)
 
 | Tabelle | Zweck / Spalten |
 |---|---|
-| `training_scenarios` | Szenarien. `title`, `difficulty`, `expected_keyword`, `facts` (JSONB: Wahrheit des Szenarios), `persona` (JSONB), `location_rules`, `checklist` (JSONB: Pflichtfragen), `created_by` |
-| `training_sessions` | Trainingsläufe. `scenario_id`, `trainee_id`, `instructor_id`, `status`, `started_at`, `ended_at`, `incident_id` |
-| `training_turns` | Gesprächsverlauf. `speaker` (`caller`/`dispatcher`), `text`, `ts`, `audio_ref` (optional, nur bei aktivierter Aufzeichnung) |
-| `training_evaluations` | Auswertung. `scores` (JSONB), `findings`, `report` |
-| `call_recordings` | Optionale Aufzeichnungen mit Aufbewahrungsfrist (`expires_at`) |
+| `training_scenarios` | Übungsszenarien (versioniert). `control_center_id` (leer = alle Leitstellen), `title`, `description`, `difficulty` (`easy`/`medium`/`hard`), `keyword_id` (erwartetes Stichwort), `persona` (JSONB), `facts` (JSONB: Wahrheit des Szenarios inkl. Koordinate), `opening_line`, `checklist` (JSONB: Prüfpunkte mit Schlüsselwörtern), `is_active` |
+| `training_sessions` | Übungen. `scenario_id`, `control_center_id`, `trainee_id/_name`, `instructor_id/_name`, `call_id` (eindeutig, Trainings-Notruf), `status` (`ringing`/`active`/`ended`/`evaluated`/`cancelled`), `caller_mode` (`claude`/`rules`), `model`, `scenario_snapshot` (Szenario zum Startzeitpunkt – Grundlage der Auswertung), `pending_instructions` (verdeckte Regie, noch nicht zugestellt), Zeitstempel |
+| `training_messages` | Gesprächsverlauf. `role` (`dispatcher`/`caller`/`instructor`/`system`), `text`, `source` (`text`/`voice`/`claude`/`rules`/`opening`/`instructor`/`note`/`system`), `latency_ms` (Nachricht → erster gesprochener Satz), `ts` (Zeitpunkt des Sprechens – bestimmt die Reihenfolge) |
+| `training_evaluations` | Auswertung (eine je Übung, Neuauswertung ersetzt). `method` (`claude`/`rules`), `model`, `score` (0–100), `metrics`, `checklist` (Punkte mit Beleg), `feedback` |
+
+KI-Einstellungen stehen in `system_settings` (Schlüssel `ai_settings`); der API-Schlüssel nur
+verschlüsselt (`key_encrypted`) mit maskiertem Hinweis. Gesprächsaufzeichnungen (Audio) gibt
+es nicht.
 
 ## 3. Beziehungen (Kernmodell)
 

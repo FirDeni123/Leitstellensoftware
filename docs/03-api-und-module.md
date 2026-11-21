@@ -159,11 +159,29 @@ Status 3 bei Abfahrt und 4 bei Ankunft. Nach dem Freigeben: Status 1, Rückfahrt
 Sonderrechte, Status 2 auf der Wache. Ein Prozess simuliert (PostgreSQL-Advisory-Lock),
 Takt 1 s (`ILS_SIMULATION_TICK_SECONDS`), im Echtbetrieb keine Simulation.
 
-### Geplant
+### Phase 7 – Ausbildung und KI-Anrufer (umgesetzt)
 
-| Phase | Ressourcen |
-|---|---|
-| 7 | `/training/scenarios`, `/training/sessions` (Start, Ende, Beobachtung), `/training/sessions/{id}/evaluation`, Audio-WebSocket `/training/sessions/{id}/audio` |
+| Methode und Pfad | Recht | Zweck |
+|---|---|---|
+| `GET/POST /training/scenarios`, `GET/PATCH /training/scenarios/{id}` | lesen: `training.participate` (ohne Lösung), sonst `training.instructor` | Szenarien |
+| `GET /training/trainees?control_center_id=` | `training.instructor` | Übende Personen einer Leitstelle |
+| `GET/POST /training/sessions` | `training.participate` (für andere: Ausbilder) | Übungen auflisten/starten – der Trainings-Notruf klingelt; nur Simulationsbetrieb |
+| `GET /training/sessions/{id}` | Teilnehmer selbst oder Ausbilder | Verlauf, Auswertung; Regie und Lösung nur für Ausbilder (Lösung für Teilnehmer nach dem Ende) |
+| `POST /training/sessions/{id}/messages` | nur die übende Person | Beitrag des Disponenten (202); die Antwort kommt per Echtzeit-Ereignis |
+| `POST /training/sessions/{id}/speech` | nur die übende Person | Sprachaufnahme erkennen und senden (501 ohne faster-whisper) |
+| `POST /training/sessions/{id}/instructions` | `training.instructor` | verdeckte Regieanweisung (`immediate` = Anrufer reagiert sofort) |
+| `POST /training/sessions/{id}/notes` | `training.instructor` | Beobachtungsnotiz |
+| `POST /training/sessions/{id}/end` | Teilnehmer oder Ausbilder | Auflegen (beendet den Trainings-Notruf) |
+| `POST /training/sessions/{id}/evaluate` | Ausbilder (Teilnehmer nur, solange keine Auswertung existiert) | (Neu-)Auswertung |
+| `GET/PUT /training/ai-settings`, `POST /training/ai-settings/test` | `system.admin` | KI ein/aus, Modell, Aufwand, Schlüssel (nie ausgegeben), Verbindungstest |
+
+Annahme und Ende des Trainings-Notrufs laufen über die normalen `/calls/{id}/answer|end`;
+in `GET /calls` erscheint ein Trainings-Notruf nur für die übende Person.
+Echtzeit-Ereignisse: `training.session_changed`, `training.message`,
+`training.caller_chunk` (Satz für Satz, `retract` bei verworfener Antwort),
+`training.pending_changed` (nur Ausbilder), `training.scenario_changed`,
+`training.ai_settings_changed`. Ereignisse gehen nur an die übende Person
+(`user:<id>`) und an Ausbilder der Leitstelle – Regie nie an die übende Person.
 
 ## 3. WebSocket-Protokoll
 

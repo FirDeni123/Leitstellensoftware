@@ -1,6 +1,6 @@
 # Betrieb: Ubuntu-Server
 
-## Systemanforderungen (Phase 1–6)
+## Systemanforderungen (Phase 1–7)
 
 - Ubuntu Server 22.04 oder 24.04 LTS, 2 vCPU, 4 GB RAM, 40 GB SSD
 - Ab Phase 6 (OSRM, ein Bundesland): +4 GB RAM. Ab Phase 7 (lokale Sprachmodelle): 8+ GB
@@ -69,6 +69,25 @@ Karte immer angezeigt.
 > Hinweis: Compose-Dienst und Skript sind in der Entwicklungsumgebung nicht ausgeführt
 > worden (kein Docker). Die OSRM-Anbindung des Servers ist gegen einen simulierten Endpunkt
 > getestet.
+
+## KI-Anrufer und Spracherkennung (Ausbildung)
+
+Der KI-Anrufer ist ausgeschaltet, bis ein Administrator ihn im Fenster „KI-Einstellungen“
+einschaltet. Voraussetzungen:
+
+- ausgehende HTTPS-Verbindung des Servers zu `api.anthropic.com`;
+- ein API-Schlüssel – entweder im Fenster „KI-Einstellungen“ (verschlüsselt gespeichert) oder
+  in der `.env` als `ILS_ANTHROPIC_API_KEY=…` (dann `docker compose up -d`). Optional
+  `ILS_ANTHROPIC_BASE_URL` (Standard `https://api.anthropic.com`) und
+  `ILS_ANTHROPIC_TIMEOUT_SECONDS` (Standard 30).
+
+Ohne KI läuft der regelbasierte Anrufer; Übungen funktionieren damit vollständig offline.
+
+Spracherkennung für die Sprechtaste ist optional und groß (Modell 0,5–3 GB, CPU-intensiv):
+Image mit `docker compose build --build-arg ILS_EXTRAS="--extra speech" api` bauen; Modell
+und Gerät über `ILS_STT_MODEL` (Standard `small`) und `ILS_STT_DEVICE` (`cpu`/`cuda`). Das
+Modell wird beim ersten Gebrauch heruntergeladen (Internetzugang nötig). Ohne das Paket bleibt
+die Sprechtaste ausgegraut; Tippen geht immer.
 
 ## Datensicherung und Wiederherstellung
 

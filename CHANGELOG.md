@@ -1,5 +1,46 @@
 # Änderungsprotokoll
 
+## 0.7.0 – 21.11.2026 – Phase 7: Ausbildung und KI-Anrufer
+
+### Hinzugefügt
+- Übungsanrufe: Ein Übungsszenario lässt einen Trainings-Notruf in der normalen
+  Notrufannahme klingeln; nur die übende Person kann ihn annehmen. Einsatz, Stichwort und
+  Alarmierung laufen über die regulären Funktionen.
+- KI-Anrufer mit Claude (Standardmodell `claude-opus-5-5`, Modell und Aufwand einstellbar):
+  Antworten werden satzweise gestreamt und sofort angezeigt und vorgelesen, Prompt-Caching,
+  serverseitiges Ausweichmodell bei Ablehnung. Standardmäßig **aus**; ohne KI antwortet ein
+  regelbasierter Anrufer aus den Szenario-Fakten. Fällt die KI aus, antwortet der
+  regelbasierte Anrufer – sichtbar gekennzeichnet.
+- Szenario-Editor (Persona, tatsächliche Lage, Eröffnungssatz, Schwierigkeit, erwartetes
+  Stichwort, Checkliste) und vier fiktive Demo-Szenarien.
+- Ausbildermodus: Übungen für Teilnehmer starten, Gespräch live mitlesen, verdeckte
+  Regieanweisungen an den Anrufer (mit der nächsten Antwort oder sofort), Beobachtungsnotizen,
+  Übung beenden; neue Standardrolle „Ausbilder“.
+- Automatische Auswertung nach dem Auflegen: Handlungen im System (Einsatz angelegt,
+  Stichwort, Einsatzort ≤ 300 m oder Adresse, Alarmierung) direkt geprüft, Gesprächspunkte
+  durch Claude (strukturierte Ausgabe) oder regelbasiert; Kennzahlen (Zeiten, Antwortlatenz),
+  Stärken und Verbesserungsvorschläge; Übungsberichte.
+- Sprache: Sprachausgabe mit den Stimmen des Betriebssystems; Sprechtaste mit
+  Spracherkennung auf dem Server (optionales Paket faster-whisper).
+- KI-Einstellungen für Administratoren (Schlüssel verschlüsselt, nie wieder angezeigt,
+  Verbindungstest), Arbeitsplatz „Ausbildung“ (F7).
+
+### Geändert
+- Mikrofonfreigabe im Windows-Client nur für die eigene Oberfläche und nur Audio.
+- Wechsel in den Echtbetrieb bricht laufende Übungen ab; Übungen starten nur im
+  Simulationsbetrieb.
+- `seed-demo` legt fehlende Standardrollen selbst an.
+
+### Behoben (während der Entwicklung gefunden)
+- Live-Listen konnten veraltet bleiben, wenn ein Ereignis während eines laufenden
+  Ladevorgangs eintraf.
+- Übungsanrufe erschienen (mit Signalton) bei allen Disponenten der Leitstelle – jetzt nur bei
+  der übenden Person.
+- Ein Fenster, das während des Ladens des gespeicherten Layouts geöffnet wurde, wurde vom
+  Layout überschrieben.
+- Eine Nachricht, die gesendet wurde, während der Anrufer schon sprach, blieb unbeantwortet
+  (Gesprächsreihenfolge jetzt nach Zeitpunkt des Sprechens).
+
 ## 0.6.0 – 21.11.2026 – Phase 6: Fahrzeuge, Karte, Simulation
 
 ### Hinzugefügt

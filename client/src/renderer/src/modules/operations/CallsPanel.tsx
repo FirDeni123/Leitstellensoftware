@@ -92,7 +92,7 @@ export function CallsPanel(): ReactNode {
                     <td><span className={`badge ${CALL_STATUS[c.status].cls}`}>{CALL_STATUS[c.status].label}</span></td>
                     <td><span className={`badge ${PRIORITY[c.priority]?.cls}`}>{PRIORITY[c.priority]?.label}</span></td>
                     <td>
-                      {c.source === 'sim' && <span className="badge sim-badge">SIM</span>} <span className="mono">{c.caller_phone ?? 'unterdrückt'}</span>
+                      {c.source === 'sim' && <span className="badge sim-badge">SIM</span>}{c.source === 'training' && <span className="badge sim-badge" title="Übungsanruf (Ausbildung)">ÜBUNG</span>} <span className="mono">{c.caller_phone ?? 'unterdrückt'}</span>
                       {c.caller_name && <span className="muted"> · {c.caller_name}</span>}
                     </td>
                     <td className="tabular">{elapsed(c.received_at, now)}</td>

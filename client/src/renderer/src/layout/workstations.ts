@@ -5,7 +5,7 @@
  */
 import { canOpenPanel, PANEL_BY_ID } from '@/modules/registry';
 
-export type WorkstationKey = 'call_taking' | 'dispatch' | 'radio' | 'management' | 'admin';
+export type WorkstationKey = 'call_taking' | 'dispatch' | 'radio' | 'management' | 'admin' | 'training';
 
 /** Default layout description: columns of tab groups (first panel of a group is active). */
 export interface DefaultLayout {
@@ -55,7 +55,14 @@ export const WORKSTATIONS: readonly Workstation[] = [
     layout: { columns: [
       { groups: [['users', 'roles', 'login-log']] },
       { groups: [['control-centers', 'areas', 'keywords', 'alarm-rules', 'proposal-settings', 'organizations', 'vehicle-types', 'status-definitions', 'import']] },
-      { groups: [['interfaces', 'audit-log'], ['module-status', 'system-messages']] },
+      { groups: [['interfaces', 'ai-settings', 'audit-log'], ['module-status', 'system-messages']] },
+    ] },
+  },
+  {
+    key: 'training', title: 'Ausbildung', shortcut: 'F7', permission: 'training.participate',
+    layout: { columns: [
+      { groups: [['training-call', 'training-monitor', 'training-scenarios']] },
+      { groups: [['emergency-calls', 'incidents'], ['map', 'training-reports', 'active-calls', 'system-messages']], width: 620 },
     ] },
   },
 ];

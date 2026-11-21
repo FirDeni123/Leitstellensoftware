@@ -53,6 +53,12 @@ export const PANELS: readonly PanelDefinition[] = [
   { id: 'vehicles', title: 'Fahrzeugübersicht', permission: 'incidents.read', phase: 6, implemented: true },
   { id: 'status-board', title: 'Statusübersicht', permission: 'incidents.read', phase: 6, implemented: true },
   { id: 'talk-requests', title: 'Sprechwünsche', permission: 'radio.handle', phase: 6, implemented: true },
+  // ---- implemented in phase 7 (training, AI caller) --------------------------------------
+  { id: 'training-call', title: 'Übungsgespräch', permission: 'training.participate', phase: 7, implemented: true },
+  { id: 'training-monitor', title: 'Ausbildung (Beobachten)', permission: 'training.instructor', phase: 7, implemented: true },
+  { id: 'training-scenarios', title: 'Übungsszenarien', permission: 'training.instructor', phase: 7, implemented: true },
+  { id: 'training-reports', title: 'Übungsberichte', permission: 'training.participate', phase: 7, implemented: true },
+  { id: 'ai-settings', title: 'KI-Einstellungen', permission: 'system.admin', phase: 7, implemented: true },
 ];
 
 export const PANEL_BY_ID = new Map(PANELS.map((p) => [p.id, p]));

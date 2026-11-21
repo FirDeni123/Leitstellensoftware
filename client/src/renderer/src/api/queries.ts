@@ -9,6 +9,7 @@ import type {
   ActiveAssignment, Alarm, AlarmRule, AuditPage, Call, ControlCenter, Incident, IncidentEvent, IncidentSummary, InterfaceEventItem,
   FleetVehicle, InterfaceItem, LoginEvent, MapConfig, Movement, Page, Permission, PluginInfo, PoliceNotice, ProposalSettings, Role,
   SimulationClock, StatusDefinition, StatusHistoryEntry, SystemInfo, TalkRequest, User,
+  AiSettings, TrainingScenario, TrainingSessionDetail, TrainingSessionSummary,
 } from './types';
 
 export const queryClient = new QueryClient({
@@ -39,6 +40,11 @@ export const TOPIC_INVALIDATIONS: Record<string, readonly (readonly string[])[]>
   'movement.changed': [['movements'], ['fleet']],
   'talk_request.changed': [['talk-requests'], ['fleet'], ['incident-events']],
   'simulation.clock_changed': [['simulation-clock']],
+  'training.session_changed': [['training-sessions'], ['training-session'], ['calls']],
+  'training.message': [['training-session']],
+  'training.pending_changed': [['training-session']],
+  'training.scenario_changed': [['training-scenarios']],
+  'training.ai_settings_changed': [['ai-settings']],
 };
 
 export function keysForTopic(topic: string): readonly (readonly string[])[] {
@@ -49,16 +55,24 @@ export function keysForTopic(topic: string): readonly (readonly string[])[] {
  * Coalesces realtime invalidations per query key: events within `delayMs` are merged, a
  * running refetch is never cancelled (cancelling under a steady stream of events would starve
  * the query), and if more events arrive while it runs, exactly one more refetch follows.
+ * `isBusy`: a fetch of the key started elsewhere (e.g. a window just mounted) may predate the
+ * event – invalidating then would only join that fetch and keep its old result, so the
+ * invalidation waits until it has finished and then fetches anew.
  */
 export function createInvalidationScheduler(
   invalidate: (key: readonly string[]) => Promise<unknown>,
   delayMs = 200,
+  isBusy: (key: readonly string[]) => boolean = () => false,
 ): { request(key: readonly string[]): void; dispose(): void } {
   const state = new Map<string, { timer: ReturnType<typeof setTimeout> | null; dirty: boolean; running: boolean }>();
   const flush = async (id: string, key: readonly string[]) => {
     const entry = state.get(id)!;
     entry.timer = null;
     if (!entry.dirty) return;
+    if (isBusy(key)) {
+      entry.timer = setTimeout(() => void flush(id, key), Math.min(delayMs, 100) || 1);
+      return;
+    }
     entry.dirty = false;
     entry.running = true;
     try {
@@ -86,7 +100,11 @@ export function createInvalidationScheduler(
 }
 
 export function installRealtimeInvalidation(client: QueryClient): () => void {
-  const scheduler = createInvalidationScheduler((key) => client.invalidateQueries({ queryKey: key }, { cancelRefetch: false }));
+  const scheduler = createInvalidationScheduler(
+    (key) => client.invalidateQueries({ queryKey: key }, { cancelRefetch: false }),
+    200,
+    (key) => client.isFetching({ queryKey: key }) > 0,
+  );
   const offEvent = onRealtimeEvent((event) => {
     for (const key of keysForTopic(event.topic)) scheduler.request(key);
     // Generic master data event: the payload names the affected collection.
@@ -319,4 +337,40 @@ export function useMapConfig(controlCenterId: string | undefined) {
 export function useSimulationClock() {
   const api = useApi();
   return useQuery({ queryKey: ['simulation-clock'], queryFn: () => api.get<SimulationClock>('/simulation/clock') });
+}
+
+export function useTrainingScenarios(controlCenterId: string | undefined, includeInactive = false) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['training-scenarios', controlCenterId, includeInactive],
+    queryFn: () => api.get<TrainingScenario[]>('/training/scenarios', { control_center_id: controlCenterId, include_inactive: includeInactive || undefined }),
+    enabled: !!controlCenterId,
+  });
+}
+
+export function useTrainingSessions(params: { controlCenterId?: string; status?: string; mine?: boolean }, enabled = true) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['training-sessions', params],
+    queryFn: () => api.get<TrainingSessionSummary[]>('/training/sessions', {
+      control_center_id: params.controlCenterId, status: params.status, mine: params.mine || undefined,
+    }),
+    enabled,
+    staleTime: 5_000,
+  });
+}
+
+export function useTrainingSession(id: string | null) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['training-session', id],
+    queryFn: () => api.get<TrainingSessionDetail>(`/training/sessions/${id}`),
+    enabled: !!id,
+    staleTime: 2_000,
+  });
+}
+
+export function useAiSettings(enabled = true) {
+  const api = useApi();
+  return useQuery({ queryKey: ['ai-settings'], queryFn: () => api.get<AiSettings>('/training/ai-settings'), enabled });
 }

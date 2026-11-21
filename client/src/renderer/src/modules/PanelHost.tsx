@@ -25,6 +25,11 @@ import { ModuleStatusPanel } from './panels/ModuleStatusPanel';
 import { PlannedPanel } from './panels/PlannedPanel';
 import { SystemMessagesPanel } from './panels/SystemMessagesPanel';
 import { UsersPanel } from './panels/UsersPanel';
+import { AiSettingsPanel } from './training/AiSettingsPanel';
+import { ScenariosPanel } from './training/ScenariosPanel';
+import { TrainingCallPanel } from './training/TrainingCallPanel';
+import { TrainingMonitorPanel } from './training/TrainingMonitorPanel';
+import { TrainingReportsPanel } from './training/TrainingReportsPanel';
 
 const IMPLEMENTED: Record<string, () => ReactNode> = {
   'emergency-calls': () => <CallsPanel />,
@@ -38,6 +43,11 @@ const IMPLEMENTED: Record<string, () => ReactNode> = {
   vehicles: () => <VehiclesPanel />,
   'status-board': () => <StatusBoardPanel />,
   'talk-requests': () => <TalkRequestsPanel />,
+  'training-call': () => <TrainingCallPanel />,
+  'training-monitor': () => <TrainingMonitorPanel />,
+  'training-scenarios': () => <ScenariosPanel />,
+  'training-reports': () => <TrainingReportsPanel />,
+  'ai-settings': () => <AiSettingsPanel />,
   keywords: () => <CrudPanel config={md.KEYWORDS} />,
   stations: () => <CrudPanel config={md.STATIONS} />,
   'vehicle-admin': () => <CrudPanel config={md.VEHICLES} />,

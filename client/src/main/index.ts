@@ -106,7 +106,14 @@ if (!app.requestSingleInstanceLock()) {
   });
 
   void app.whenReady().then(() => {
-    session.defaultSession.setPermissionRequestHandler((_wc, _permission, callback) => callback(false));
+    // Everything is denied – except the microphone (audio only, own origin) for the push-to-talk
+    // key of training calls. Recording starts only while the key is held.
+    session.defaultSession.setPermissionRequestHandler((_wc, permission, callback, details) => {
+      const origin = isDev ? (process.env['ELECTRON_RENDERER_URL'] ?? '') : `${APP_ORIGIN}/`;
+      const ownOrigin = details.requestingUrl.startsWith(origin);
+      const audioOnly = permission === 'media' && 'mediaTypes' in details && (details.mediaTypes ?? []).every((t) => t === 'audio');
+      callback(ownOrigin && audioOnly);
+    });
     registerAppProtocol();
     registerIpc();
     createWindow();

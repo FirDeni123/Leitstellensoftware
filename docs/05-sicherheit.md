@@ -104,8 +104,9 @@ Freigabe.
 - Minimale Preload-Brücke (Konfiguration lesen/schreiben mit Validierung, App-Info).
 - Strikte Content-Security-Policy (keine fremden Skripte, kein `eval`).
 - Navigation und neue Fenster blockiert. Externe https-Links öffnen im Systembrowser.
-- Berechtigungsanfragen (Kamera, Mikrofon, Standort …) werden standardmäßig abgelehnt. Das
-  Mikrofon wird in Phase 7 gezielt freigegeben.
+- Berechtigungsanfragen (Kamera, Standort …) werden abgelehnt. Einzige Ausnahme: Mikrofon
+  (nur Audio) für die eigene Oberfläche – für die Sprechtaste in Übungen; aufgenommen wird nur,
+  solange die Taste gedrückt ist.
 - Renderer über ein eigenes Schema `app://ils` statt `file://`.
 - Single-Instance-Sperre.
 - Geplant (Phase 8): Code-Signing des Installers, signierte Auto-Updates.
@@ -117,8 +118,10 @@ Freigabe.
 - Trainingsdaten enthalten fiktive Personen. Echte Personendaten fallen erst im
   Echtbetrieb an. Dafür sind ein Lösch- und Aufbewahrungskonzept und ein
   Verarbeitungsverzeichnis vorzusehen (Phase 8).
-- KI-Dienste: Es werden nur Trainingsinhalte übertragen. Für Cloud-KI ist der Anbieter in
-  der Schnittstellenverwaltung zu konfigurieren; lokale Alternativen (STT/TTS) sind Standard.
+- KI-Dienste: Es werden nur Trainingsinhalte übertragen (Szenario und Gesprächsverlauf), und
+  nur wenn ein Administrator den KI-Anrufer einschaltet. Szenarien sind mit fiktiven Daten zu
+  füllen (Hinweis im Editor und in den KI-Einstellungen). Spracherkennung läuft lokal auf dem
+  Server, Sprachausgabe lokal im Client.
 
 ## 10. Datensicherung
 
@@ -153,3 +156,23 @@ und tauscht erst nach Erfolg; der alte Stand bleibt als `ils_before_restore` erh
   (gebündelte Datei, kein Fremdskript) und dekodierte Kacheln. Kacheln werden per `fetch`
   geladen (`connect-src`); die Kachelquelle legt der Server fest.
 
+
+## Ausbildung und KI-Anrufer (Phase 7)
+
+- **Keine echten Leitungen:** Ein Übungsanruf ist ein Datensatz (`source = training`); der
+  Trainingsbereich hat keinerlei Telefonie-Anbindung (`IS_REAL = False`). Übungen starten nur im
+  Simulationsbetrieb; der Wechsel in den Echtbetrieb bricht laufende Übungen ab.
+- **KI ohne Handlungsmacht:** Claude erhält keine Werkzeuge. Die Antwort ist nur Text im
+  Übungsgespräch. Einsatzanlage, Stichwort und Alarmierung bleiben Handlungen des Disponenten.
+- **Standardmäßig aus:** Der KI-Anrufer ist nach der Installation ausgeschaltet; nur
+  Administratoren (`system.admin`) können ihn einschalten und den Schlüssel setzen.
+- **API-Schlüssel:** verschlüsselt mit SecretBox in `system_settings`, nie im Quellcode, nie
+  in Antworten, Protokollen oder Ereignissen (Test prüft Datenbank und Änderungsprotokoll).
+  Alternativ `ILS_ANTHROPIC_API_KEY` in der `.env` des Servers. Die Zieladresse
+  (`ILS_ANTHROPIC_BASE_URL`) wird ausdrücklich gesetzt und nicht aus Umgebungsvariablen des
+  Prozesses übernommen.
+- **Sichtbarkeit:** Echtzeit-Ereignisse einer Übung gehen nur an die übende Person und an
+  Ausbilder der Leitstelle; verdeckte Regie und die Szenario-Lösung sieht die übende Person
+  während der Übung nicht.
+- **Nachvollziehbarkeit:** Start, Regie-Eingriffe, Auswertung und Änderungen an Szenarien
+  und KI-Einstellungen stehen im Änderungsprotokoll.

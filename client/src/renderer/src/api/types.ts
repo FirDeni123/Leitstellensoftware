@@ -815,3 +815,132 @@ export interface SimulationClock {
   factors: number[];
   simulation_mode: boolean;
 }
+
+// ---------------------------------------------------------------- Phase 7: Ausbildung / KI-Anrufer
+export type Difficulty = 'easy' | 'medium' | 'hard';
+export type Effort = 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+export type TrainingStatus = 'ringing' | 'active' | 'ended' | 'evaluated' | 'cancelled';
+
+export interface TrainingPersona {
+  name?: string | null;
+  age?: number | null;
+  role?: string | null;
+  emotional_state?: string | null;
+  speech_style?: string | null;
+  phone?: string | null;
+}
+
+export interface TrainingFacts {
+  address?: string | null;
+  lat?: number | null;
+  lon?: number | null;
+  location_hint?: string | null;
+  situation?: string | null;
+  persons?: string | null;
+  injuries?: string | null;
+  hazards?: string | null;
+  details?: string[];
+  unknown?: string[];
+}
+
+export interface ChecklistItem {
+  key: string;
+  label: string;
+  required: boolean;
+  hints: string[];
+}
+
+export interface TrainingScenario {
+  id: Uuid;
+  control_center_id: Uuid | null;
+  title: string;
+  description: string | null;
+  difficulty: Difficulty;
+  keyword_id: Uuid | null;
+  keyword_code: string | null;
+  keyword_name: string | null;
+  persona: TrainingPersona;
+  facts: TrainingFacts;
+  opening_line: string;
+  checklist: ChecklistItem[];
+  is_active: boolean;
+  version: number;
+  updated_at: string;
+}
+
+export interface TrainingMessage {
+  id: number;
+  ts: string;
+  role: 'dispatcher' | 'caller' | 'instructor' | 'system';
+  text: string;
+  source: string;
+  latency_ms: number | null;
+  author_name: string | null;
+}
+
+export interface EvaluationItem {
+  key: string;
+  label: string;
+  kind: 'action' | 'question';
+  required: boolean;
+  fulfilled: boolean;
+  evidence: string;
+}
+
+export interface TrainingEvaluation {
+  created_at: string;
+  method: 'claude' | 'rules';
+  model: string | null;
+  score: number;
+  metrics: Record<string, number | null>;
+  checklist: EvaluationItem[];
+  feedback: { summary?: string; strengths?: string[]; improvements?: string[]; note?: string | null };
+}
+
+export interface TrainingSessionSummary {
+  id: Uuid;
+  scenario_id: Uuid;
+  control_center_id: Uuid;
+  title: string;
+  difficulty: Difficulty;
+  trainee_id: Uuid;
+  trainee_name: string;
+  instructor_id: Uuid | null;
+  instructor_name: string | null;
+  call_id: Uuid | null;
+  call_status: CallStatus | null;
+  status: TrainingStatus;
+  caller_mode: 'claude' | 'rules';
+  model: string | null;
+  created_at: string;
+  answered_at: string | null;
+  ended_at: string | null;
+  score: number | null;
+}
+
+export interface PendingInstruction {
+  text: string;
+  author: string | null;
+  immediate: boolean;
+  ts: string;
+}
+
+export interface TrainingSessionDetail extends TrainingSessionSummary {
+  messages: TrainingMessage[];
+  pending_instructions: PendingInstruction[] | null;
+  scenario: { title: string; difficulty: Difficulty; persona: TrainingPersona; facts: TrainingFacts; opening_line: string; keyword: { id: Uuid; code: string; name: string } | null } | null;
+  evaluation: TrainingEvaluation | null;
+}
+
+export interface AiSettings {
+  enabled: boolean;
+  model: string;
+  caller_effort: Effort;
+  evaluation_effort: Effort;
+  has_key: boolean;
+  key_hint: string | null;
+  server_key: boolean;
+  base_url: string;
+  speech_to_text: boolean;
+  version: number | null;
+}

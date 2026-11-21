@@ -12,14 +12,16 @@ gleichzeitig arbeitende Disponenten.
 
 ## Stand
 
-**Phase 6 (Fahrzeuge, Karte, Simulation) ist abgeschlossen** (Version 0.6.0): Fahrzeugstatus mit
-Statushistorie, Sprechwünsche, Karte mit Live-Positionen, simulierte Fahrten nach der
-Alarmierung (Ausrücken, Anfahrt, Ankunft, Rückfahrt) mit OSRM-Routing oder gekennzeichneter
-Luftlinie. Bereits vorhanden: Einsatzmittelvorschlag mit Begründungen, Alarmierung mit AAO,
-Vorschau und Bestätigung, Polizei-Hinweis (nur Information), Schnittstellen-Plugins mit
-strikter Trennung von Simulation und Echtbetrieb; Notrufannahme, Einsatzbearbeitung,
-Grundsystem und Stammdatenverwaltung. Details, Testergebnisse und nächste Schritte:
-[docs/STATUS.md](docs/STATUS.md).
+**Phase 7 (Ausbildung, KI-Anrufer) ist umgesetzt** (Version 0.7.0): Übungsanrufe mit einem
+KI-Anrufer (Claude, vom Administrator einzuschalten) oder einem regelbasierten Anrufer ohne KI,
+Szenario-Editor, Ausbildermodus (live mitlesen, verdeckt eingreifen), automatische Auswertung
+mit Checkliste und Kennzahlen, Sprachausgabe und optionale Spracherkennung. Der Meilenstein M7
+ist mit dem regelbasierten Anrufer nachgewiesen; die Antwortzeit des KI-Anrufers ist noch mit
+einem echten API-Schlüssel zu messen. Bereits vorhanden: Fahrzeuge und Karte mit Simulation,
+Einsatzmittelvorschlag, Alarmierung mit AAO und Polizei-Hinweis (nur Information),
+Schnittstellen-Plugins mit strikter Trennung von Simulation und Echtbetrieb, Notrufannahme,
+Einsatzbearbeitung, Grundsystem und Stammdatenverwaltung. Details, Testergebnisse und nächste
+Schritte: [docs/STATUS.md](docs/STATUS.md).
 
 ## Aufbau
 

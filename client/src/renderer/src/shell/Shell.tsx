@@ -43,7 +43,7 @@ export function Shell(): ReactNode {
     [],
   );
 
-  // F2–F6 switch workstations (classic control-room key layout).
+  // F2–F7 switch workstations (classic control-room key layout).
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = workstations.find((w) => w.shortcut === e.key);

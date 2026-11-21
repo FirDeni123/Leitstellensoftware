@@ -8,8 +8,19 @@ const DISPATCHER = ['calls.handle', 'incidents.read', 'incidents.write', 'incide
 
 describe('workstations', () => {
   it('offers workstations according to permissions', () => {
-    expect(availableWorkstations(DISPATCHER).map((w) => w.key)).toEqual(['call_taking', 'dispatch', 'radio', 'management']);
+    expect(availableWorkstations(DISPATCHER).map((w) => w.key)).toEqual(['call_taking', 'dispatch', 'radio', 'management', 'training']);
     expect(availableWorkstations(['incidents.read'])).toEqual([]);
+  });
+
+  it('training workstation shows instructor windows only to instructors', () => {
+    const training = WORKSTATIONS.find((w) => w.key === 'training')!;
+    const trainee = permittedLayout(training, DISPATCHER).columns.flatMap((c) => c.groups.flat());
+    expect(trainee).toContain('training-call');
+    expect(trainee).not.toContain('training-monitor');
+    expect(trainee).not.toContain('training-scenarios');
+    const instructor = permittedLayout(training, [...DISPATCHER, 'training.instructor']).columns.flatMap((c) => c.groups.flat());
+    expect(instructor).toContain('training-monitor');
+    expect(instructor).toContain('training-scenarios');
   });
 
   it('strips panels the user may not open from default layouts', () => {

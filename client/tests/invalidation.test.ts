@@ -37,4 +37,16 @@ describe('realtime invalidation scheduler', () => {
     expect(count).toBe(2);
     expect(maxRunning).toBe(1);
   });
+
+  it('waits for a fetch that started before the event, then fetches anew', async () => {
+    let busy = true; // e.g. a window just mounted and is loading with the old state
+    const calls: number[] = [];
+    const s = createInvalidationScheduler(async () => { calls.push(Date.now()); }, 200, () => busy);
+    s.request(['training-sessions']);
+    await vi.advanceTimersByTimeAsync(600);
+    expect(calls).toHaveLength(0); // joining the old fetch would keep the stale result
+    busy = false;
+    await vi.advanceTimersByTimeAsync(150);
+    expect(calls).toHaveLength(1);
+  });
 });

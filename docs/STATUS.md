@@ -1,13 +1,69 @@
 # Projektstatus
 
-**Stand:** 21.11.2026 · **Version:** 0.6.0 · **Aktuelle Phase:** 6 abgeschlossen, nächste: Phase 7 (Telefonie, Sprache, KI-Anrufer, Ausbildermodus)
+**Stand:** 21.11.2026 · **Version:** 0.7.0 · **Aktuelle Phase:** 7 umgesetzt (M7 mit
+regelbasiertem Anrufer nachgewiesen, Claude-Latenz noch zu messen), nächste: Phase 8
+(Stabilisierung)
 
-**Testergebnis zuletzt:** Server 136/136 ✅ · Client-Unit 48/48 ✅ · E2E 13/13 ✅ (dreimal in Folge) ·
+**Testergebnis zuletzt:** Server 155/155 ✅ · Client-Unit 56/56 ✅ · E2E 15/15 ✅ (zweimal in Folge) ·
 Ruff ✅ · TypeScript ✅ · `alembic check` ✅
 
 **Repository:** https://github.com/FirDeni123/Leitstellensoftware (Branch `main`).
 
-## Phase 6 – Fahrzeuge, Karte, Simulation (umgesetzt und getestet)
+## Phase 7 – Ausbildung und KI-Anrufer (umgesetzt)
+
+| Bereich | Inhalt | Nachweis |
+|---|---|---|
+| Datenmodell | Migration `0007`: `training_scenarios` (versioniert), `training_sessions` (Szenario-Schnappschuss, Anrufer-Modus, Modell, verdeckte Regieanweisungen), `training_messages`, `training_evaluations`; neue Standardrolle „Ausbilder“ | Migration up/down/up, `alembic check` |
+| Übungsablauf | Übung starten → Trainings-Notruf (`source = training`) klingelt in der normalen Notrufannahme; nur die übende Person darf annehmen/fortsetzen; Annahme spielt den Eröffnungssatz; Auflegen beendet die Übung, nicht angenommen = abgebrochen; nur im Simulationsbetrieb, Wechsel in den Echtbetrieb bricht ab | `test_exercise_without_ai_end_to_end`, `test_permissions_and_visibility`, `test_exercises_only_in_simulation_mode`, `test_unanswered_…` |
+| KI-Anrufer | Claude über das offizielle SDK: Streaming, Antwort satzweise sofort an Client (Anzeige + Sprachausgabe), Aufwand „niedrig“, Prompt-Caching, serverseitiges Ausweichmodell bei Ablehnung, Regieanweisungen als Systemnachricht im Gespräch; Schlüssel verschlüsselt; standardmäßig aus | `test_claude_caller_streams_sentences`, `test_instructor_interventions_…` (gegen einen SDK-Nachbau, siehe unten) |
+| Regelbasierter Anrufer | Antworten aus den Szenario-Fakten per Schlüsselwort; Rückfall bei KI-Fehlern, Ablehnung oder fehlendem Schlüssel – im Verlauf sichtbar gekennzeichnet | `test_ai_failures_fall_back_to_rules_visibly`, E2E |
+| Reihenfolge, mehrere Server-Prozesse | Antworten je Übung über eine PostgreSQL-Sperre serialisiert; eine Nachricht, die während der Antwort eintrifft, bekommt eine eigene Antwort; doppelte Auslösung erzeugt nur eine Antwort | `test_message_during_reply_gets_its_own_answer` |
+| Ausbildermodus | Übung für Teilnehmer starten, live mitlesen, verdeckte Regie (mit nächster Antwort oder sofort), Notizen, beenden, neu auswerten; Teilnehmer sehen weder Regie noch Lösung während der Übung | `test_instructor_interventions_reach_only_the_caller`, E2E |
+| Auswertung | automatisch nach dem Auflegen: Einsatz angelegt, Stichwort, Einsatzort (≤ 300 m oder Adresse), Alarmierung direkt aus den Systemdaten; Gesprächspunkte per Claude (strukturierte Ausgabe) oder Schlüsselwörtern; Kennzahlen, Stärken, Verbesserungen; Ergebnis = Anteil erfüllter Pflichtpunkte | `test_claude_evaluation_uses_structured_output`, `test_exercise_without_ai_end_to_end`, E2E |
+| Sprache | Sprachausgabe mit Windows-Stimmen (Web Speech API, satzweise); Sprechtaste mit Spracherkennung auf dem Server (faster-whisper, optionales Paket, Docker-Build-Argument) | Endpunkt mit Erkennungs-Nachbau getestet; faster-whisper selbst hier nicht installiert |
+| Fenster | Übungsgespräch, Ausbildung (Beobachten), Übungsszenarien (Editor), Übungsberichte, KI-Einstellungen; Arbeitsplatz „Ausbildung“ (F7); Übungsanrufe in der Notrufannahme als „ÜBUNG“ markiert | E2E `phase7.spec.ts`, Unit-Tests `training.test.ts` |
+| Demo | vier fiktive Szenarien (Pkw-Brand leicht, VU eingeklemmt mittel, Brustschmerz RD2 mittel, Küchenbrand mit Menschenleben in Gefahr schwer), Benutzer `ausbilder.demo` | `test_demo_scenarios_are_valid_and_seeded_once` |
+
+Screenshots: `docs/screenshots/70-m7-uebungsgespraech.png`, `71-m7-ausbilder.png`,
+`72-m7-auswertung.png`, `73-ki-einstellungen.png`.
+
+**Meilenstein M7 – ehrlicher Stand:**
+
+- **Nachgewiesen (E2E, regelbasierter Anrufer):** Übungsanruf annehmen, Gespräch führen,
+  währenddessen den Einsatz mit Stichwort und Ort anlegen, auflegen, Auswertung mit
+  Checkliste erhalten; der Ausbilder liest live mit und steuert den Anrufer verdeckt.
+- **Gemessen:** Eigenanteil des Servers an der Antwortzeit (Nachricht speichern bis erster
+  Satz veröffentlicht) 14–25 ms (`test_server_overhead_of_a_reply_is_small`).
+- **Nicht gemessen:** Antwortzeit mit dem echten Claude-Modell. In dieser Umgebung ist kein
+  API-Schlüssel vorhanden; der Claude-Weg ist gegen einen Nachbau des SDK getestet
+  (Parameter, Nachrichtenfolge, Streaming, Fehler- und Ablehnungsfälle). Ob 2,5 s
+  eingehalten werden, zeigt erst ein Test mit Schlüssel (Messwert steht danach in jeder
+  Antwort im Verlauf).
+- **Sprachgespräch nur teilweise:** Sprachausgabe im Client vorhanden; Spracherkennung
+  verlangt das optionale Paket auf dem Server (hier nicht installiert, Modell-Download nötig).
+  Piper-Stimmen, Audio-Streaming per WebSocket, Sprechpausenerkennung und Unterbrechen sind
+  **nicht** umgesetzt.
+
+## Bei der Umsetzung von Phase 7 gefundene und behobene Fehler
+
+- **Fenster verschwand:** Ein Fenster, das geöffnet wurde, während das gespeicherte Layout
+  noch lud, wurde vom Layout überschrieben (im E2E-Test gefunden). Das Öffnen wird jetzt nach
+  dem Laden nachgeholt.
+- **Unbeantwortete Nachricht:** Schrieb der Disponent, während der Anrufer schon antwortete,
+  landete die Antwort hinter der neuen Nachricht – diese blieb unbeantwortet. Beiträge sind
+  jetzt nach dem Zeitpunkt des Sprechens geordnet (Test).
+- **Veraltete Live-Liste unter Last:** Traf ein Echtzeit-Ereignis ein, während eine Liste
+  gerade noch mit altem Stand geladen wurde (z. B. ein eben geöffnetes Fenster), hängte sich
+  die Aktualisierung an diesen Ladevorgang – die Liste blieb veraltet (im E2E-Gesamtlauf
+  gefunden, betrifft alle Live-Listen). Die Aktualisierung wartet jetzt, bis der laufende
+  Ladevorgang fertig ist, und lädt dann neu (Unit-Test).
+- **Übungsanruf klingelte bei allen:** Ein Trainings-Notruf erschien mit Signalton in der
+  Warteschlange aller Disponenten der Leitstelle, obwohl nur die übende Person annehmen darf.
+  Er erscheint jetzt nur bei ihr (Test).
+- **`seed-demo` nach Update:** Neue Standardrollen fehlten, bis der Server einmal gestartet
+  war. `seed-demo` gleicht den Rollenkatalog jetzt selbst ab.
+
+## Phase 6 – Fahrzeuge, Karte, Simulation (abgeschlossen, 0.6.0)
 
 | Bereich | Inhalt | Nachweis |
 |---|---|---|
@@ -122,15 +178,19 @@ Notrufe, Fahrzeugzuordnung und Statuswechsel mit den handelnden Personen
 |---|---|
 | OSRM-Dienst und OSM-Kacheln in einer Umgebung mit Docker/Internet prüfen | Betrieb (Anbindung fertig) |
 | Bündelung (Clustering) überlappender Fahrzeugmarker an einer Wache | Phase 8 |
-| Zurückgelegte Strecken (Tracks) speichern und anzeigen | Phase 7 (Auswertung) |
+| Zurückgelegte Strecken (Tracks) speichern und anzeigen | Phase 8 |
 | Sonderrechtsfaktor je Fahrzeugtyp/Straßenklasse, Ausrückzeit je Wache | spätere Erweiterung der Vorschlagsregeln |
 | Reale FMS-/TETRA-Statusanbindung und GPS-Ortung (Plugins `PositionSource`) | spätere Plugins |
 | Funkalarmierung (POCSAG/TETRA) | späteres Plugin |
 | Anbindung einer konkreten Feuerwehrsoftware (z. B. Feuersoftware Connect) | späteres Plugin, nach Schnittstellendoku und Testzugang |
 | Adresssuche (Geokodierung) für den Einsatzort | Phase 8 |
 | Gemeindeschlüssel-Bereiche bei Zuständigkeit und AAO-Bereichswahl auswerten (heute nur Geometrie) | mit Adresssuche |
-| Klingelnde Notrufe ohne Annahme nach Zeit als „verpasst“ markieren | Phase 7 (mit Telefonie) |
-| Rollen-Editor nutzt noch nicht den gemeinsamen Bearbeitungsschutz | Phase 7 |
+| Claude-Antwortzeit mit echtem API-Schlüssel messen (M7 vollständig abnehmen) | sobald ein Schlüssel hinterlegt ist |
+| Sprachpipeline: Piper-Stimmen auf dem Server, Audio-Streaming per WebSocket, Sprechpausenerkennung, Unterbrechen | Phase 7b / 8 |
+| faster-whisper in einer Umgebung mit Modell-Download prüfen (Sprechtaste) | Betrieb |
+| Zufallsgenerator für Szenarien, zulässige Alternativ-Stichworte, Export der Übungsberichte, optionale Gesprächsaufzeichnung | Phase 7b / 8 |
+| Klingelnde Notrufe ohne Annahme nach Zeit als „verpasst“ markieren | Phase 8 |
+| Rollen-Editor nutzt noch nicht den gemeinsamen Bearbeitungsschutz | Phase 8 |
 | Pop-out-Fenster für Mehrmonitorbetrieb | Phase 8 |
 | Allowlist für Webhook-Ziele, IP-basierte Ratenbegrenzung, Zertifikats-Pinning, Code-Signing, Auto-Update | Phase 8 |
 | Electron: Karten-Worker über das `app://`-Protokoll im echten Windows-Client prüfen (Web-Build geprüft) | Windows-CI |
@@ -140,17 +200,16 @@ Notrufe, Fahrzeugzuordnung und Statuswechsel mit den handelnden Personen
 - Docker-Compose-Gesamtstack und Installationsskript, Windows-Installer (CI-Job), native
   Fensterleiste unter Windows.
 
-## Nächster konkreter Schritt (Phase 7 – Telefonie, Sprache, KI-Anrufer)
+## Nächster konkreter Schritt
 
-1. Sprachpipeline im simulierten Gespräch: Spracherkennung (faster-whisper) und
-   Sprachausgabe (Piper) auf dem Server, Audio über WebSocket; ohne Sprache weiterhin Text.
-2. KI-Anrufer mit Claude (Modell konfigurierbar, Standard `claude-opus-5-5`): Personas,
-   Schwierigkeitsgrade, Szenario-„Wahrheit“; nie Verbindung zu echten Notrufleitungen.
-3. Szenario-Editor und Ausbildermodus (beobachten, eingreifen), automatische Auswertung mit
-   Checkliste (Pflichtfragen, Zeiten, Stichwort, Alarmierung).
-4. Abnahme M7: Sprachgespräch mit KI-Anrufer (Antwortlatenz unter 2,5 s), Einsatzanlage
-   währenddessen, Auswertung danach. Voraussetzung: ein API-Schlüssel für Claude (wird
-   verschlüsselt gespeichert, nie im Code).
+1. **M7 abschließen (benötigt eine Entscheidung des Betreibers):** einen Claude-API-Schlüssel
+   hinterlegen – im Fenster „KI-Einstellungen“ (verschlüsselt in der Datenbank) oder als
+   Umgebungsvariable `ILS_ANTHROPIC_API_KEY` auf dem Server –, KI-Anrufer einschalten,
+   „Verbindung testen“ und eine Übung führen. Die Antwortzeit steht je Antwort im Verlauf
+   und als Mittel/Maximum in der Auswertung.
+2. Phase 8 (Stabilisierung): Sicherheits- und Lasttests (20 Arbeitsplätze), signierter
+   Installer, Auto-Update, Backup/Restore-Test, Betriebs- und Benutzerdokumentation; dazu die
+   offenen Punkte oben.
 
 ## Annahmen und Entscheidungen
 
@@ -159,8 +218,14 @@ Notrufe, Fahrzeugzuordnung und Statuswechsel mit den handelnden Personen
 - Einsatznummern: `JJJJ-NNNNNN`, Jahr nach Ortszeit (`ILS_TIMEZONE`, Standard Europe/Berlin).
 - Disponenten dürfen im Simulationsbetrieb Statuswerte manuell setzen; ab Phase 4/6 werden
   diese aus Alarmierung und Fahrzeugstatus abgeleitet.
-- Ohne Sprach-KI (Phase 7) enthält ein simulierter Notruf ein Gesprächsprotokoll mit den
-  Antworten des Anrufers „auf Nachfrage“.
+- Simulierte Notrufe aus Phase 3 enthalten weiterhin ein festes Gesprächsprotokoll; das
+  freie Gespräch gibt es in Übungen (Phase 7).
+- KI-Anrufer: Standardmodell `claude-opus-5-5` mit Aufwand „niedrig“ im Gespräch und
+  „mittel“ bei der Auswertung; der Administrator kann beides ändern. Die KI spielt nur den
+  Anrufer und hat keine Werkzeuge – sie kann nichts anlegen, alarmieren oder anrufen.
+- Übungsinhalte gehen bei eingeschalteter KI an die Claude-API (Anthropic). Deshalb sind
+  Szenarien ausdrücklich nur mit fiktiven Daten zu füllen; ohne Einschalten verlässt nichts
+  den Server.
 - In der Entwicklungsumgebung ist ein Zugang zu einer externen Alarmierungs-API hinterlegt. Er
   wurde **bewusst nicht angesprochen** (reale Alarmierungsschnittstelle). Ein passendes
   Plugin wird erst mit Schnittstellendokumentation und Testzugang gebaut – standardmäßig

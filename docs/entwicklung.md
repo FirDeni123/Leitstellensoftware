@@ -41,11 +41,15 @@ Die Serveradresse wird in der Anmeldemaske unter „Server“ eingestellt.
 ## Tests
 
 ```bash
-cd server && uv run pytest -q                     # 136 Tests, echte PostgreSQL-Testdatenbank ils_test
+cd server && uv run pytest -q                     # 155 Tests, echte PostgreSQL-Testdatenbank ils_test
 cd server && uv run ruff check app tests && uv run ruff format --check app tests
-cd client && npm run typecheck && npm test        # 48 Unit-Tests (vitest)
-cd client && npm run build:web && npm run e2e     # 13 E2E-Tests (Server mit seed-demo, Simulationsbetrieb)
+cd client && npm run typecheck && npm test        # 56 Unit-Tests (vitest)
+cd client && npm run build:web && npm run e2e     # 15 E2E-Tests (Server mit seed-demo, Simulationsbetrieb)
 ```
+
+Die Tests des KI-Anrufers (`tests/test_training.py`) sprechen **nie** mit der echten
+Claude-API: `ai_settings.make_client` wird durch einen Nachbau des SDK ersetzt. Die E2E-Tests
+laufen mit dem regelbasierten Anrufer (KI aus).
 
 Server-Tests legen das Schema über die Alembic-Migrationen an. Damit werden die Migrationen
 mitgetestet. Die Testdatenbank wird bei jedem Lauf vollständig neu aufgebaut.
