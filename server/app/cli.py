@@ -174,6 +174,11 @@ def main(argv: list[str] | None = None) -> None:
     b.add_argument("--admin-password", default=os.environ.get("ILS_BOOTSTRAP_ADMIN_PASSWORD"))
     d = sub.add_parser("seed-demo", help="Demo-Leitstelle und Demo-Benutzer anlegen")
     d.add_argument("--password", default=os.environ.get("ILS_DEMO_PASSWORD", "Demo-Passwort-2026!"))
+    d.add_argument(
+        "--allow-production",
+        action="store_true",
+        help="auch bei ILS_ENVIRONMENT=production (nur reine Test- und Schulungsserver)",
+    )
     c = sub.add_parser("create-user", help="Benutzer anlegen")
     c.add_argument("username")
     c.add_argument("display_name")
@@ -196,8 +201,13 @@ def _dispatch(args: argparse.Namespace) -> None:
     elif args.cmd == "bootstrap":
         asyncio.run(bootstrap(args.admin_username, args.admin_password))
     elif args.cmd == "seed-demo":
+        if get_settings().is_production and not args.allow_production:
+            sys.exit(
+                "seed-demo ist in der Produktionsumgebung deaktiviert. Nur auf einem reinen Test- "
+                "oder Schulungsserver: ils-admin seed-demo --allow-production"
+            )
         if get_settings().is_production:
-            sys.exit("seed-demo ist in der Produktionsumgebung deaktiviert")
+            print("WARNUNG: Demodaten werden auf einem Server im Produktionsmodus angelegt.")
         asyncio.run(seed_demo(args.password))
     elif args.cmd == "create-user":
         asyncio.run(create_user(args.username, args.display_name, args.role, args.password))

@@ -29,7 +29,8 @@
 - Mikrofonfreigabe im Windows-Client nur für die eigene Oberfläche und nur Audio.
 - Wechsel in den Echtbetrieb bricht laufende Übungen ab; Übungen starten nur im
   Simulationsbetrieb.
-- `seed-demo` legt fehlende Standardrollen selbst an.
+- `seed-demo` legt fehlende Standardrollen selbst an und lässt sich auf reinen Test- und
+  Schulungsservern im Produktionsmodus mit `--allow-production` ausführen.
 
 ### Behoben (während der Entwicklung gefunden)
 - Live-Listen konnten veraltet bleiben, wenn ein Ereignis während eines laufenden

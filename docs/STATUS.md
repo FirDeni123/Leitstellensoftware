@@ -4,7 +4,7 @@
 regelbasiertem Anrufer nachgewiesen, Claude-Latenz noch zu messen), nächste: Phase 8
 (Stabilisierung)
 
-**Testergebnis zuletzt:** Server 155/155 ✅ · Client-Unit 56/56 ✅ · E2E 15/15 ✅ (zweimal in Folge) ·
+**Testergebnis zuletzt:** Server 156/156 ✅ · Client-Unit 56/56 ✅ · E2E 15/15 ✅ (zweimal in Folge) ·
 Ruff ✅ · TypeScript ✅ · `alembic check` ✅
 
 **Repository:** https://github.com/FirDeni123/Leitstellensoftware (Branch `main`).

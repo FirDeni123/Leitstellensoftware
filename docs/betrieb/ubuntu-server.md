@@ -19,6 +19,19 @@ Das Skript installiert Docker, erzeugt `deploy/.env` mit zufälligen Geheimnisse
 startet PostgreSQL, Redis, die API und Caddy und legt den ersten Administrator an. **Das
 ausgegebene Initialpasswort notieren**; es muss bei der ersten Anmeldung geändert werden.
 
+## Demodaten (nur Test- und Schulungsserver)
+
+Fiktive Demo-Leitstelle mit Wachen, Fahrzeugen, AAO, Übungsszenarien und Demo-Benutzern
+(`admin.demo`, `lead.demo`, `dispo.demo`, `ausbilder.demo`, `annahme.demo`,
+`beobachter.demo`). Auf einem Server im Produktionsmodus nur mit ausdrücklichem Schalter:
+
+```bash
+cd /opt/ils-sim/deploy
+sudo docker compose exec api ils-admin seed-demo --allow-production --password 'Eigenes-Demo-Passwort-1!'
+```
+
+Nicht auf einem Server verwenden, der echte Daten verarbeiten soll.
+
 ## TLS-Zertifikat für die Clients
 
 Bei `tls internal` (Standard) erzeugt Caddy eine eigene Zertifizierungsstelle:
