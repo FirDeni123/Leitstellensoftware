@@ -41,7 +41,7 @@ CALL_STATUSES = ("ringing", "active", "on_hold", "ended")
 
 
 class Keyword(UUIDPrimaryKeyMixin, TimestampMixin, VersionedMixin, Base):
-    """Einsatzstichwort (global catalogue). Alarm rules (AAO) follow in phase 4."""
+    """Einsatzstichwort (global catalogue). Alarm rules (AAO) are per control centre."""
 
     __tablename__ = "keywords"
     __table_args__ = (CheckConstraint("default_priority BETWEEN 1 AND 3", name="priority_range"),)
@@ -52,6 +52,9 @@ class Keyword(UUIDPrimaryKeyMixin, TimestampMixin, VersionedMixin, Base):
     default_priority: Mapped[int] = mapped_column(Integer, default=2)
     description: Mapped[str | None] = mapped_column(Text)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # Police are never alarmed by the system – the dispatcher only gets a notice to confirm.
+    police_notice: Mapped[bool] = mapped_column(Boolean, default=False, server_default=text("false"))
+    police_notice_text: Mapped[str | None] = mapped_column(Text)
 
 
 class EmergencyCall(UUIDPrimaryKeyMixin, TimestampMixin, VersionedMixin, Base):

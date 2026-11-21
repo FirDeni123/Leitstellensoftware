@@ -1,6 +1,6 @@
 [project]
 name = "ils-server"
-version = "0.3.0"
+version = "0.4.0"
 description = "ILS-Sim – zentraler Server (API, Echtzeit, Simulation) für die Leitstellen-Simulation"
 requires-python = ">=3.12"
 dependencies = [
@@ -18,6 +18,7 @@ dependencies = [
     "httpx>=0.28",
     "openpyxl>=3.1",
     "python-multipart>=0.0.20",
+    "jsonschema>=4.23",
 ]
 
 [dependency-groups]

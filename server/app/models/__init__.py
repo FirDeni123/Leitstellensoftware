@@ -1,5 +1,14 @@
 """All ORM models – imported here so Alembic and the metadata see every table."""
 
+from app.models.alarming import (
+    Alarm,
+    AlarmRule,
+    AlarmRuleItem,
+    AlarmTarget,
+    Interface,
+    InterfaceEvent,
+    PoliceNotice,
+)
 from app.models.audit import AuditLog
 from app.models.auth import AuthSession, LoginEvent, RefreshToken
 from app.models.control_center import ControlCenter, ControlCenterArea, ControlCenterLink
@@ -36,6 +45,13 @@ from app.models.user import (
 )
 
 __all__ = [
+    "Alarm",
+    "AlarmRule",
+    "AlarmRuleItem",
+    "AlarmTarget",
+    "Interface",
+    "InterfaceEvent",
+    "PoliceNotice",
     "CallNote",
     "EmergencyCall",
     "Incident",

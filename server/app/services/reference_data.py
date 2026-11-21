@@ -95,6 +95,19 @@ KEYWORD_DEFAULTS: tuple[tuple[str, str, str, int], ...] = (
 )
 
 
+POLICE_SEED_FLAG = "keyword_police_notices_v1"
+
+# Keywords that show the dispatcher a notice to inform the police (never an alarm).
+POLICE_DEFAULTS: dict[str, str] = {
+    "H2": "Verkehrsunfall mit Verletzten – Polizei informieren (Unfallaufnahme, Verkehrsregelung).",
+    "H-KLEMM": "Verkehrsunfall mit eingeklemmter Person – Polizei informieren (Unfallaufnahme, Absperrung).",
+    "B-MIG": "Brand mit Menschenleben in Gefahr – Polizei informieren (Absperrung, Ermittlungen).",
+    "W1": "Person im Wasser – Polizei informieren.",
+    "ABC2": "Gefahrstoffaustritt mit Gefährdung – Polizei informieren (Absperrung, Evakuierung).",
+    "MANV": "Massenanfall von Verletzten – Polizei informieren.",
+}
+
+
 async def ensure_reference_data(uow: UnitOfWork) -> dict[str, int]:
     s = uow.session
     await s.execute(text("SELECT pg_advisory_xact_lock(470012)"))
@@ -140,6 +153,15 @@ async def ensure_reference_data(uow: UnitOfWork) -> dict[str, int]:
                 s.add(Keyword(code=code, name=name, category=category, default_priority=priority))
                 keywords += 1
         s.add(SystemSetting(key=KEYWORD_SEED_FLAG, value=True))
+
+    if await s.get(SystemSetting, POLICE_SEED_FLAG) is None:
+        await s.flush()  # keywords created above must be visible to the query (autoflush is off)
+        for kw in (await s.scalars(select(Keyword).where(Keyword.code.in_(POLICE_DEFAULTS)))).all():
+            if not kw.police_notice:
+                kw.police_notice = True
+                kw.police_notice_text = POLICE_DEFAULTS[kw.code]
+        s.add(SystemSetting(key=POLICE_SEED_FLAG, value=True))
+        await s.flush()
 
     if statuses or orgs or types or keywords:
         uow.audit(

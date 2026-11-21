@@ -43,7 +43,7 @@ MODULES: tuple[ModuleStatus, ...] = (
         name="Wachen",
         phase=2,
         status="available",
-        note="Schnittstellen je Wache folgen mit Phase 4",
+        note="Schnittstellen je Wache über das Schnittstellen-Modul",
     ),
     ModuleStatus(
         key="vehicles",
@@ -57,7 +57,7 @@ MODULES: tuple[ModuleStatus, ...] = (
         name="RICs und Alarmierungsgruppen",
         phase=2,
         status="available",
-        note="Zuordnung zu Einsatzstichworten folgt mit Phase 4",
+        note="Zuordnung zu Stichworten über die AAO",
     ),
     ModuleStatus(key="radio_groups", name="Funkrufgruppen", phase=2, status="available"),
     ModuleStatus(
@@ -79,16 +79,33 @@ MODULES: tuple[ModuleStatus, ...] = (
         name="Einsatzbearbeitung, Einsatzverlauf, Stichwortkatalog",
         phase=3,
         status="available",
-        note="Status „Alarmiert/Anfahrt/Am Einsatzort“ werden ab Phase 4/6 automatisch gesetzt",
+        note="„Alarmiert“ wird durch die Alarmierung gesetzt; „Anfahrt/Am Einsatzort“ ab Phase 6",
     ),
-    ModuleStatus(key="alarming", name="Alarmierung (Stichworte, AAO, RIC)", phase=4, status="planned"),
-    ModuleStatus(key="police_notice", name="Polizei-Hinweis (keine Alarmierung)", phase=4, status="planned"),
+    ModuleStatus(
+        key="alarming",
+        name="Alarmierung (AAO, Vorschau, Bestätigung, Nachalarmierung, Protokoll)",
+        phase=4,
+        status="available",
+        note="Funkalarmierung (POCSAG/TETRA) nicht angebunden; Fahrzeugvorschlag nach Luftlinie bis Phase 5",
+    ),
+    ModuleStatus(
+        key="police_notice",
+        name="Polizei-Hinweis (nur Information, keine Alarmierung)",
+        phase=4,
+        status="available",
+    ),
     ModuleStatus(key="proposal", name="Einsatzmittelvorschlag", phase=5, status="planned"),
     ModuleStatus(key="vehicle_status", name="Fahrzeugstatus und Sprechwünsche", phase=6, status="planned"),
     ModuleStatus(key="map", name="Karte und GPS-Simulation", phase=6, status="planned"),
     ModuleStatus(key="voice", name="Sprach- und Telefoniesimulation", phase=7, status="planned"),
     ModuleStatus(key="ai_caller", name="KI-Anrufsimulation und Ausbildermodus", phase=7, status="planned"),
-    ModuleStatus(key="interfaces", name="Schnittstellen und Plugins", phase=4, status="planned"),
+    ModuleStatus(
+        key="interfaces",
+        name="Schnittstellen und Plugins",
+        phase=4,
+        status="available",
+        note="Simulations-Empfänger und Webhook; Feuerwehrsoftware-Anbindungen als spätere Plugins",
+    ),
 )
 
 
@@ -123,6 +140,13 @@ class SystemService:
         setting.value = mode.value
         setting.updated_by = self.uow.actor.user_id
         await self.s.flush()
+        if mode == OperationMode.SIMULATION:
+            # Leaving real operation: every real interface is switched off (clear separation).
+            from app.services.interface_service import disable_real_interfaces
+
+            disabled = await disable_real_interfaces(self.uow)
+            if disabled:
+                reason = f"{reason} – automatisch deaktiviert: {', '.join(disabled)}"
         self.uow.audit(
             "mode_change",
             "system",

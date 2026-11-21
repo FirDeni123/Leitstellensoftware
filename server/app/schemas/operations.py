@@ -32,6 +32,8 @@ class KeywordCreate(ApiModel):
     default_priority: int = Field(default=2, ge=1, le=3)
     description: str | None = Field(default=None, max_length=4000)
     is_active: bool = True
+    police_notice: bool = False
+    police_notice_text: str | None = Field(default=None, max_length=1000)
 
     @model_validator(mode="after")
     def _code(self) -> KeywordCreate:
@@ -45,12 +47,16 @@ class KeywordUpdate(VersionedUpdate):
     default_priority: int | None = Field(default=None, ge=1, le=3)
     description: str | None = Field(default=None, max_length=4000)
     is_active: bool | None = None
+    police_notice: bool | None = None
+    police_notice_text: str | None = Field(default=None, max_length=1000)
 
 
 class KeywordOut(KeywordRef):
     default_priority: int
     description: str | None
     is_active: bool
+    police_notice: bool
+    police_notice_text: str | None
     created_at: datetime
     updated_at: datetime
     version: int

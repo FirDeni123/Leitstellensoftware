@@ -355,6 +355,34 @@ class IncidentService:
     # --------------------------------------------------------------------------- vehicles
     async def assign(self, incident_id: uuid.UUID, vehicle_ids: list[uuid.UUID], reassign: bool) -> Incident:
         incident = await self.get(incident_id, lock=True)
+        added = await self.assign_vehicles(incident, vehicle_ids, reassign)
+        if not added:
+            return incident
+        self.uow.audit(
+            "assign",
+            "incident",
+            incident.id,
+            f"Einsatz {incident.number}: Fahrzeuge zugeordnet ({', '.join(added)})",
+            control_center_id=incident.control_center_id,
+        )
+        await self.commit_assignments()
+        await self.s.refresh(incident)
+        return incident
+
+    async def commit_assignments(self) -> None:
+        try:
+            await self.uow.commit()
+        except IntegrityError as exc:  # partial unique index as last line of defence
+            await self.uow.rollback()
+            raise ConflictError(
+                "Fahrzeug wurde gleichzeitig einem anderen Einsatz zugeordnet – bitte neu laden"
+            ) from exc
+
+    async def assign_vehicles(
+        self, incident: Incident, vehicle_ids: list[uuid.UUID], reassign: bool
+    ) -> list[str]:
+        """Assign vehicles to a locked incident (history + events, no commit). Returns the call signs
+        that were newly assigned. Used by manual assignment and by the alarm."""
         if incident.status in NO_ASSIGNMENT_STATUSES:
             raise ConflictError(
                 "Einem beendeten oder abgeschlossenen Einsatz können keine Fahrzeuge zugeordnet werden"
@@ -424,7 +452,7 @@ class IncidentService:
             )
             added.append(vehicle.call_sign)
         if not added:
-            return incident
+            return added
         if incident.status == "new":
             incident.status = "in_progress"
             incident.status_changed_at = now
@@ -435,25 +463,11 @@ class IncidentService:
                 {"from": "new", "to": "in_progress"},
             )
         incident.updated_at = now
-        self.uow.audit(
-            "assign",
-            "incident",
-            incident.id,
-            f"Einsatz {incident.number}: Fahrzeuge zugeordnet ({', '.join(added)})",
-            control_center_id=incident.control_center_id,
-        )
         self.emit(incident, "vehicles")
         for other in touched.values():
             self.emit(other, "vehicles")
-        try:
-            await self.uow.commit()
-        except IntegrityError as exc:  # partial unique index as last line of defence
-            await self.uow.rollback()
-            raise ConflictError(
-                "Fahrzeug wurde gleichzeitig einem anderen Einsatz zugeordnet – bitte neu laden"
-            ) from exc
-        await self.s.refresh(incident)
-        return incident
+        await self.s.flush()
+        return added
 
     async def release(self, incident_id: uuid.UUID, vehicle_id: uuid.UUID) -> Incident:
         incident = await self.get(incident_id, lock=True)

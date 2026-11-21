@@ -9,8 +9,13 @@ from sqlalchemy import select
 
 from app.models import (
     AlarmGroup,
+    AlarmRule,
+    AlarmRuleItem,
     ControlCenter,
     ControlCenterArea,
+    Interface,
+    InterfaceEvent,
+    Keyword,
     Organization,
     RadioGroup,
     Ric,
@@ -62,6 +67,33 @@ RADIO_GROUPS = (
     ("TBZ Rettungsdienst (Demo)", "1002", ("RW M", "RW O"), ("rettungsdienst", "drk")),
     ("TBZ THW (Demo)", "1003", ("THW",), ("thw",)),
 )
+# keyword code -> ((stage, vehicle type code, count), ...) – fictional demo AAO
+ALARM_RULES: dict[str, tuple[tuple[int, str, int], ...]] = {
+    "B1": ((1, "HLF20", 1), (2, "TLF3000", 1)),
+    "B2": ((1, "HLF20", 1), (1, "DLK23", 1), (1, "ELW1", 1), (2, "HLF20", 2), (2, "RTW", 1)),
+    "B3": (
+        (1, "HLF20", 2),
+        (1, "DLK23", 1),
+        (1, "ELW1", 1),
+        (1, "TLF3000", 1),
+        (1, "RTW", 1),
+        (2, "LF20", 1),
+        (2, "LF10", 1),
+        (2, "RW", 1),
+    ),
+    "B-MIG": ((1, "HLF20", 2), (1, "DLK23", 1), (1, "ELW1", 1), (1, "RTW", 1), (1, "NEF", 1)),
+    "BMA": ((1, "HLF20", 1), (1, "DLK23", 1)),
+    "H1": ((1, "HLF20", 1),),
+    "H2": ((1, "HLF20", 1), (1, "RTW", 1), (1, "NEF", 1), (2, "RW", 1)),
+    "H-KLEMM": ((1, "HLF20", 2), (1, "RW", 1), (1, "ELW1", 1), (1, "RTW", 1), (1, "NEF", 1)),
+    "W1": ((1, "HLF20", 1), (1, "RTW", 1), (1, "NEF", 1)),
+    "RD1": ((1, "RTW", 1),),
+    "RD2": ((1, "RTW", 1), (1, "NEF", 1)),
+    "RD-KTP": ((1, "KTW", 1),),
+    "MANV": ((1, "RTW", 3), (1, "NEF", 1), (1, "ELW1", 1), (2, "GKW", 1)),
+}
+DEMO_INTERFACE = "Simulations-Empfänger (Demo)"
+
 AREA = {
     "type": "MultiPolygon",
     "coordinates": [[[[10.40, 53.45], [10.58, 53.45], [10.58, 53.56], [10.40, 53.56], [10.40, 53.45]]]],
@@ -176,13 +208,57 @@ async def seed_master_data(uow: UnitOfWork, cc: ControlCenter) -> dict[str, int]
         )
         counts["vehicles"] += 1
     await s.flush()
+    counts["alarm_rules"] = await _seed_alarming(uow, cc, types)
     if any(counts.values()):
         uow.audit(
             "seed",
             "demo_data",
             cc.id,
             f"Demo-Stammdaten angelegt ({counts['stations']} Wachen, {counts['vehicles']} Fahrzeuge, "
-            f"{counts['rics']} RICs, {counts['radio_groups']} Funkrufgruppen)",
+            f"{counts['rics']} RICs, {counts['radio_groups']} Funkrufgruppen, "
+            f"{counts['alarm_rules']} AAO)",
             control_center_id=cc.id,
         )
     return counts
+
+
+async def _seed_alarming(uow: UnitOfWork, cc: ControlCenter, types: dict[str, VehicleType]) -> int:
+    """Demo AAO per keyword and an (enabled) simulation receiver – never a real interface."""
+    s = uow.session
+    keywords = {k.code: k for k in (await s.scalars(select(Keyword))).all()}
+    existing = set(
+        (await s.scalars(select(AlarmRule.keyword_id).where(AlarmRule.control_center_id == cc.id))).all()
+    )
+    created = 0
+    for code, items in ALARM_RULES.items():
+        keyword = keywords.get(code)
+        if keyword is None or keyword.id in existing:
+            continue
+        rule = AlarmRule(control_center_id=cc.id, keyword_id=keyword.id, name=f"{code} (Demo)")
+        rule.items = [
+            AlarmRuleItem(
+                stage=stage, position=pos, kind="vehicle_type", count=count, vehicle_type_id=types[t].id
+            )
+            for pos, (stage, t, count) in enumerate(items)
+            if t in types
+        ]
+        s.add(rule)
+        created += 1
+    if not await s.scalar(select(Interface.id).where(Interface.name == DEMO_INTERFACE)):
+        interface = Interface(
+            plugin_key="simulation_receiver",
+            name=DEMO_INTERFACE,
+            scope="control_center",
+            control_center_id=cc.id,
+            enabled=True,  # simulation plugin (is_real=False): no external system is contacted
+            config={"receiver_label": "Übungs-Alarmierungs-App (Demo)"},
+        )
+        s.add(interface)
+        await s.flush()
+        s.add(
+            InterfaceEvent(
+                interface_id=interface.id, level="info", kind="config", message="Demo-Schnittstelle angelegt"
+            )
+        )
+    await s.flush()
+    return created

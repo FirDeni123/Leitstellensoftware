@@ -18,13 +18,27 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
-from app.api.routers import auth, control_centers, imports, master_data, operations, system, users, ws
+from app.api.routers import (
+    alarming,
+    auth,
+    control_centers,
+    imports,
+    interfaces,
+    master_data,
+    operations,
+    system,
+    users,
+    ws,
+)
 from app.core.config import APP_VERSION, Settings, get_settings
+from app.core.crypto import SecretBox
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging, request_id_var
 from app.db.session import Database
+from app.plugins.registry import load_entry_points
 from app.realtime.bus import create_bus
 from app.realtime.hub import ConnectionHub
+from app.services.alarm_delivery import recover_interrupted_deliveries
 from app.services.reference_data import ensure_reference_data
 from app.services.role_service import sync_catalogue
 from app.services.uow import UnitOfWork
@@ -41,6 +55,7 @@ async def _synchronise_catalogues(app: FastAPI) -> None:
         uow = UnitOfWork(session, app.state.bus)
         await sync_catalogue(uow)
         await ensure_reference_data(uow)
+        await recover_interrupted_deliveries(uow)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -50,7 +65,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         app.state.settings = settings
+        app.state.secret_box = SecretBox.from_config(settings.encryption_keys)
         app.state.db = Database(settings)
+        load_entry_points()
         app.state.hub = ConnectionHub()
         app.state.bus = create_bus(settings.redis_url)
         await app.state.bus.start(app.state.hub.handle)
@@ -79,7 +96,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_origins=settings.cors_origins,
         allow_credentials=False,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
-        allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+        allow_headers=["Authorization", "Content-Type", "X-Request-ID", "Idempotency-Key"],
         expose_headers=["X-Request-ID"],
     )
     register_exception_handlers(app)
@@ -133,6 +150,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     api.include_router(master_data.router)
     api.include_router(imports.router)
     api.include_router(operations.router)
+    api.include_router(alarming.router)
+    api.include_router(interfaces.router)
     api.include_router(system.router)
     api.include_router(ws.router)
     app.include_router(api)

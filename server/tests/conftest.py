@@ -35,6 +35,7 @@ ADMIN_PASSWORD = "Test-Admin-Pass-1!"
 USER_PASSWORD = "Test-User-Pass-1!"
 
 DATA_TABLES = (
+    "interface_events, alarm_targets, alarms, police_notices, alarm_rule_items, alarm_rules, interfaces, "
     "call_notes, emergency_calls, incident_events, incident_vehicles, incidents, incident_number_sequences, "
     "keywords, audit_log, login_events, refresh_tokens, auth_sessions, user_layouts, system_settings, "
     "user_permission_overrides, user_roles, user_control_centers, users, "
