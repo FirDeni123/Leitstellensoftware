@@ -37,7 +37,17 @@ zusätzlich als Text gespeichert.
 
 ## 2. Geplante Tabellen (Phasen 2–7)
 
-### Phase 2 – Stammdaten
+### Phase 2 – Stammdaten (✅ umgesetzt, Migration `0002`)
+
+Umgesetzt wie geplant, mit folgenden Präzisierungen: RIC-Zuordnungen über `station_rics` und
+`vehicle_rics` (beidseitig pflegbar), Alarmierungsgruppen über `alarm_group_rics`,
+Funkrufgruppen über `radio_group_stations` / `radio_group_organizations` (Fahrzeuge über
+`vehicles.radio_group_id`). `vehicle_status_definitions` (ursprünglich Phase 6) wurde vorgezogen,
+weil Fahrzeuge bereits einen Status tragen. Funkrufname und Wachenname sind je Leitstelle ohne
+Beachtung der Groß-/Kleinschreibung eindeutig (funktionaler Index). Ein Check-Constraint
+verhindert eine alarmierbare Polizei. Die Position eines Fahrzeugs an seiner Wache wird nicht
+kopiert, sondern aus der Wache abgeleitet (`position_source = station`).
+
 
 | Tabelle | Zweck / Spalten |
 |---|---|

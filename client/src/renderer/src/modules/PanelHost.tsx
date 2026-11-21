@@ -3,7 +3,12 @@ import { EmptyState } from '@/components/common';
 import { sysmsg } from '@/state/messages';
 import { canOpenPanel, type PanelDefinition } from './registry';
 import { useSession } from '@/state/session';
+import { CrudPanel } from './crud/CrudPanel';
+import * as md from './masterdata/configs';
 import { AuditLogPanel } from './panels/AuditLogPanel';
+import { ImportPanel } from './panels/ImportPanel';
+import { LoginLogPanel } from './panels/LoginLogPanel';
+import { RolesPanel } from './panels/RolesPanel';
 import { ControlCentersPanel } from './panels/ControlCentersPanel';
 import { ModuleStatusPanel } from './panels/ModuleStatusPanel';
 import { PlannedPanel } from './panels/PlannedPanel';
@@ -11,6 +16,18 @@ import { SystemMessagesPanel } from './panels/SystemMessagesPanel';
 import { UsersPanel } from './panels/UsersPanel';
 
 const IMPLEMENTED: Record<string, () => ReactNode> = {
+  stations: () => <CrudPanel config={md.STATIONS} />,
+  'vehicle-admin': () => <CrudPanel config={md.VEHICLES} />,
+  rics: () => <CrudPanel config={md.RICS} />,
+  'alarm-groups': () => <CrudPanel config={md.ALARM_GROUPS} />,
+  'radio-groups': () => <CrudPanel config={md.RADIO_GROUPS} />,
+  organizations: () => <CrudPanel config={md.ORGANIZATIONS} />,
+  'vehicle-types': () => <CrudPanel config={md.VEHICLE_TYPES} />,
+  'status-definitions': () => <CrudPanel config={md.STATUS_DEFINITIONS} />,
+  areas: () => <CrudPanel config={md.AREAS} />,
+  import: () => <ImportPanel />,
+  roles: () => <RolesPanel />,
+  'login-log': () => <LoginLogPanel />,
   'system-messages': () => <SystemMessagesPanel />,
   'audit-log': () => <AuditLogPanel />,
   'module-status': () => <ModuleStatusPanel />,

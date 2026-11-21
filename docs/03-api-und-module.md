@@ -50,11 +50,31 @@
 | GET/PUT/DELETE | `/me/layouts/{workstation}` | angemeldet | Fensterlayout |
 | WS | `/ws` | Token in erster Nachricht | Echtzeit |
 
+### Umgesetzt (Phase 2)
+
+Alle Stammdaten-Endpunkte haben dieselbe Form: `GET` Liste (`control_center_id`, `q`, Filter),
+`GET /{id}`, `POST`, `PATCH /{id}` (mit `expected_version`), `DELETE /{id}`. Lesen erfordert
+`master_data.read` (Bereiche: `control_centers.read`), Schreiben die jeweilige Fachberechtigung.
+
+| Pfad | Schreibrecht | Hinweise |
+|---|---|---|
+| `/organizations` | `organizations.write` | global; Polizei nie alarmierbar (422) |
+| `/vehicle-types` | `organizations.write` | global; Filter `category` |
+| `/vehicle-status-definitions` | `vehicles.write` | nur Lesen/Ändern (Codes 0–9 fest) |
+| `/stations` | `stations.write` | `ric_ids`, Verfügbarkeit (immer / Zeitplan / nicht verfügbar) |
+| `/vehicles` | `vehicles.write` | Filter `station_id`, `vehicle_type_id`, `organization_id`, `radio_group_id`; `position` abgeleitet |
+| `/rics` | `rics.write` | `station_ids`, `vehicle_ids` |
+| `/alarm-groups` | `rics.write` | `ric_ids` |
+| `/radio-groups` | `radio_groups.write` | `station_ids`, `organization_ids`; Fahrzeuge lesend |
+| `/control-center-areas` | `control_centers.write` | GeoJSON (Polygon/MultiPolygon) und/oder Gemeindeschlüssel |
+| `/control-center-links` | `control_centers.write` | GET/POST/DELETE; Art: Nachbar, Rückfallebene, Kooperation |
+| `GET /responsibility?latitude&longitude` | – | zuständige Leitstelle(n) nach Priorität |
+| `/imports` | `data.import` + `vehicles.write`/`stations.write` | `POST` (multipart: `file`, `kind`, `control_center_id`), `PUT /{id}/mapping`, `POST /{id}/commit` (`skip_invalid`), `DELETE /{id}` |
+
 ### Geplant
 
 | Phase | Ressourcen |
 |---|---|
-| 2 | `/organizations`, `/stations`, `/vehicle-types`, `/vehicles`, `/rics`, `/alarm-groups`, `/radio-groups`, `/control-centers/{id}/links`, `/imports` (Upload → Spaltenzuordnung → Vorschau/Validierung → Bestätigung) |
 | 3 | `/calls` (annehmen, halten, beenden, zuordnen), `/calls/{id}/notes`, `/incidents`, `/incidents/{id}/events`, `/incidents/{id}/vehicles` (zuordnen, abziehen, umsetzen), `/incidents/{id}/close` |
 | 4 | `/keywords`, `/alarm-rules`, `/incidents/{id}/alarm-preview`, `/incidents/{id}/alarms` (mit Idempotency-Key), `/police-notices/{id}/acknowledge`, `/interfaces` (+ `/test`, `/events`), `/plugins` |
 | 5 | `/incidents/{id}/proposal` (berechnen, mit Begründungen), `/proposal-settings` |
@@ -78,7 +98,8 @@ Schließcodes: `4001` Authentifizierung fehlgeschlagen/abgelaufen · `4002` Rech
 
 **Event-Themen** (`topic`), umgesetzt: `user.created`, `user.updated`, `me.changed`,
 `role.changed`, `control_center.changed`, `audit.created`, `system.mode_changed`,
-`layout.changed`. Geplant: `call.*`, `incident.*`, `alarm.*`, `police_notice.created`,
+`layout.changed`, `master_data.changed` (`data.collection` nennt die betroffene Sammlung,
+z. B. `vehicles`; zugestellt nur an Benutzer der betroffenen Leitstelle). Geplant: `call.*`, `incident.*`, `alarm.*`, `police_notice.created`,
 `vehicle.status`, `vehicle.positions` (gebündelt je Takt), `talk_request.*`,
 `interface.status`, `training.*`.
 

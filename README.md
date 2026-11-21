@@ -12,9 +12,11 @@ gleichzeitig arbeitende Disponenten.
 
 ## Stand
 
-**Phase 1 (Grundsystem) ist abgeschlossen.** Umgesetzt sind Anmeldung, Rechteverwaltung,
-Leitstellen, Änderungsprotokoll, Echtzeitsynchronisation und der Windows-Client mit
-anpassbaren Arbeitsplätzen. Details, Testergebnisse und nächste Schritte:
+**Phase 2 (Administration) ist abgeschlossen** (Version 0.2.0). Umgesetzt sind Grundsystem
+(Anmeldung, Rechte, Änderungsprotokoll, Echtzeit, Windows-Client mit anpassbaren
+Arbeitsplätzen) sowie die Stammdatenverwaltung: Leitstellen mit Verknüpfungen und
+Zuständigkeitsbereichen, Organisationen, Fahrzeugtypen, Wachen, Fahrzeuge, RICs,
+Alarmierungs- und Funkrufgruppen, Rollen-Editor und Excel/CSV-Import mit Prüfvorschau. Details, Testergebnisse und nächste Schritte:
 [docs/STATUS.md](docs/STATUS.md).
 
 ## Aufbau

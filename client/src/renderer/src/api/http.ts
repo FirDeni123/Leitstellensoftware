@@ -77,6 +77,10 @@ export class ApiClient {
   delete<T = void>(path: string): Promise<T> {
     return this.request<T>('DELETE', path);
   }
+  /** multipart/form-data upload (file imports). */
+  upload<T>(path: string, form: FormData): Promise<T> {
+    return this.request<T>('POST', path, form);
+  }
 
   /** Unauthenticated health probe used by the login screen ("Verbindung testen"). */
   async health(): Promise<{ status: string; version: string; checks: Record<string, string> }> {
@@ -129,7 +133,8 @@ export class ApiClient {
 
   private async send(method: Method, url: string, body: unknown, auth: boolean): Promise<Response> {
     const headers: Record<string, string> = { Accept: 'application/json' };
-    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
+    if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
     if (auth && this.accessToken) headers['Authorization'] = `Bearer ${this.accessToken}`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.opts.timeoutMs ?? 15000);
@@ -137,7 +142,7 @@ export class ApiClient {
       return await this.fetchImpl(url, {
         method,
         headers,
-        body: body === undefined ? undefined : JSON.stringify(body),
+        body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
         signal: controller.signal,
       });
     } catch (e) {

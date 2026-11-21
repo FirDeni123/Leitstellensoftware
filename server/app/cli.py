@@ -24,6 +24,7 @@ from app.core.crypto import SecretBox
 from app.core.errors import AppError
 from app.core.security import generate_initial_password, hash_password, validate_password_policy
 from app.db.session import Database
+from app.demo_data import seed_master_data
 from app.models import ControlCenter, Role, User
 from app.realtime.bus import InMemoryEventBus
 from app.services.reference_data import ensure_reference_data
@@ -128,6 +129,8 @@ async def seed_demo(password: str) -> None:
             await s.flush()
             uow.audit("create", "user", user.id, f"Demo-Benutzer {username} angelegt (Seed)")
             print(f"Benutzer angelegt: {username} ({role_key})")
+        counts = await seed_master_data(uow, cc)
+        print(f"Demo-Stammdaten: {counts}")
         # Assign every administrator to the demo centre so it shows up as default.
         for admin in (await s.scalars(select(User).where(User.roles.any(Role.key == "admin")))).all():
             if cc not in admin.control_centers:

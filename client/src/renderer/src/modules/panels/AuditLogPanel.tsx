@@ -9,12 +9,26 @@ const ENTITY_LABEL: Record<string, string> = {
   control_center: 'Leitstelle',
   system: 'System',
   permission_catalogue: 'Berechtigungen',
+  reference_data: 'Referenzdaten',
+  demo_data: 'Demodaten',
+  organization: 'Organisation',
+  vehicle_type: 'Fahrzeugtyp',
+  vehicle_status_definition: 'Statusbezeichnung',
+  station: 'Wache',
+  vehicle: 'Fahrzeug',
+  ric: 'RIC',
+  alarm_group: 'Alarmierungsgruppe',
+  radio_group: 'Funkrufgruppe',
+  control_center_area: 'Zuständigkeitsbereich',
+  control_center_link: 'Leitstellen-Verknüpfung',
+  import_job: 'Datenimport',
 };
 
 const ACTION_LABEL: Record<string, string> = {
   create: 'Angelegt', update: 'Geändert', delete: 'Gelöscht', activate: 'Aktiviert', deactivate: 'Deaktiviert',
   password_reset: 'Passwort zurückgesetzt', password_change: 'Passwort geändert', unlock: 'Entsperrt',
-  mode_change: 'Moduswechsel', sync: 'Synchronisiert',
+  mode_change: 'Moduswechsel', sync: 'Synchronisiert', seed: 'Demodaten angelegt',
+  upload: 'Datei hochgeladen', commit: 'Import übernommen', discard: 'Import verworfen',
 };
 
 function formatValue(v: unknown): string {

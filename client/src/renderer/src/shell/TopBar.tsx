@@ -3,6 +3,7 @@ import { useLayoutActions } from '@/layout/DockArea';
 import type { Workstation, WorkstationKey } from '@/layout/workstations';
 import { canOpenPanel, PANELS } from '@/modules/registry';
 import { useSession } from '@/state/session';
+import { useActiveControlCenter, useWorkContext } from '@/state/workContext';
 import { Clock } from './Clock';
 
 function useOutsideClose(open: boolean, close: () => void) {
@@ -29,7 +30,8 @@ export function TopBar(props: {
   const close = () => setMenu(null);
   const ref = useOutsideClose(menu !== null, close);
 
-  const cc = me.control_centers[0];
+  const { active, all } = useActiveControlCenter();
+  const setControlCenter = useWorkContext((s) => s.setControlCenter);
 
   return (
     <header className="topbar">
@@ -37,7 +39,13 @@ export function TopBar(props: {
         <span className="brand-mark sm" aria-hidden>ILS</span>
         <div className="brand-text">
           <span className="brand-title">ILS-Sim</span>
-          <span className="brand-sub">{cc ? cc.name : me.all_control_centers ? 'Alle Leitstellen' : 'Keine Leitstelle zugeordnet'}</span>
+          {all.length > 1 ? (
+            <select className="cc-select" aria-label="Aktive Leitstelle" value={active?.id ?? ''} onChange={(e) => setControlCenter(e.target.value)}>
+              {all.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          ) : (
+            <span className="brand-sub">{active ? active.name : 'Keine Leitstelle zugeordnet'}</span>
+          )}
         </div>
       </div>
 

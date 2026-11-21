@@ -14,7 +14,8 @@ import { sysmsg } from '@/state/messages';
 import { useSession } from '@/state/session';
 import { permittedLayout, type DefaultLayout, type Workstation } from './workstations';
 
-const LAYOUT_SCHEMA = 1;
+// Bumped when default layouts change substantially (stored layouts are replaced once).
+const LAYOUT_SCHEMA = 2;
 const SAVE_DEBOUNCE_MS = 1500;
 
 interface LayoutActions {

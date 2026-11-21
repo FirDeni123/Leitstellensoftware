@@ -1,5 +1,29 @@
 # Änderungsprotokoll
 
+## 0.2.0 – 21.11.2026 – Phase 2: Administration
+
+### Hinzugefügt
+- Stammdaten: Organisationen (Polizei technisch nie alarmierbar), Fahrzeugtypen,
+  administrierbare FMS-Statusbezeichnungen, Wachen mit Verfügbarkeit (Zeitplan), Fahrzeuge,
+  RICs (beidseitige Zuordnung zu Wachen/Fahrzeugen), Alarmierungsgruppen, Funkrufgruppen
+  (Wachen, Organisationen, Fahrzeuge), Leitstellen-Verknüpfungen, Zuständigkeitsbereiche
+  (GeoJSON, Gemeindeschlüssel, Abfrage der zuständigen Leitstelle).
+- Excel/CSV-Import für Fahrzeuge und Wachen: Spaltenerkennung mit deutschen Synonymen,
+  zeilengenaue Prüfung, Vorschau, Aktualisieren vorhandener Datensätze, Übernahme in einer
+  Transaktion, Verwerfen; Beispieldateien in `docs/beispiele`.
+- Client: generisches Stammdaten-Panel, Import-Assistent, Rollen-Editor, individuelle
+  Rechte je Benutzer, Anmeldeprotokoll, Leitstellen-Umschalter in der Kopfzeile,
+  neue Standardlayouts für Verwaltung und Administrator.
+- Schutz ungespeicherter Eingaben bei gleichzeitiger Bearbeitung (Hinweis + Konflikt statt
+  stillem Überschreiben).
+- Rechtekatalog und Referenzdaten werden bei jedem Serverstart synchronisiert.
+- Demo-Daten: fiktive Wachen, Fahrzeuge, RICs, Funkrufgruppen und Zuständigkeitsbereich.
+
+### Geändert
+- Neue Berechtigungen `master_data.read` und `organizations.write` (Systemrollen erhalten sie
+  automatisch gemäß Standarddefinition).
+- Standardlayouts (Schema 2): gespeicherte Layouts werden einmalig durch die neuen Standards ersetzt.
+
 ## 0.1.0 – 21.11.2026 – Phase 1: Grundsystem
 
 ### Hinzugefügt

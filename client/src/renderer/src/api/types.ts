@@ -151,3 +151,189 @@ export interface LoginEvent {
   client_name: string | null;
   workstation: string | null;
 }
+
+// ------------------------------------------------------------------ Phase 2: master data
+export type OrganizationKind = 'fire' | 'ems' | 'civil_protection' | 'technical_relief' | 'aid' | 'police' | 'other';
+
+export interface Versioned {
+  id: Uuid;
+  version: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface OrganizationRef {
+  id: Uuid;
+  key: string;
+  name: string;
+  kind: OrganizationKind;
+  color: string | null;
+  alarmable: boolean;
+}
+
+export interface Organization extends OrganizationRef, Versioned {
+  description: string | null;
+  is_active: boolean;
+}
+
+export interface VehicleTypeRef {
+  id: Uuid;
+  code: string;
+  name: string;
+  category: OrganizationKind;
+}
+
+export interface VehicleType extends VehicleTypeRef, Versioned {
+  default_speed_kmh: number;
+  default_crew: number | null;
+  capabilities: string[];
+  description: string | null;
+  is_active: boolean;
+}
+
+export interface StatusDefinition {
+  code: number;
+  label: string;
+  short_label: string;
+  color: string;
+  counts_as_available: boolean;
+  description: string | null;
+  version: number;
+}
+
+export interface RicRef {
+  id: Uuid;
+  code: string;
+  sub_address: string;
+  label: string;
+}
+
+export interface StationRef {
+  id: Uuid;
+  name: string;
+  short_name: string | null;
+}
+
+export interface Availability {
+  mode: 'always' | 'schedule' | 'unavailable';
+  schedule: { days: number[]; start: string; end: string }[];
+  note?: string | null;
+}
+
+export interface Station extends StationRef, Versioned {
+  control_center_id: Uuid;
+  organization: OrganizationRef;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  phone: string | null;
+  availability: Availability;
+  description: string | null;
+  osm_ref: string | null;
+  is_active: boolean;
+  rics: RicRef[];
+}
+
+export interface RadioGroupRef {
+  id: Uuid;
+  name: string;
+  talkgroup: string | null;
+}
+
+export interface Vehicle extends Versioned {
+  control_center_id: Uuid;
+  call_sign: string;
+  license_plate: string | null;
+  station: StationRef;
+  vehicle_type: VehicleTypeRef;
+  organization: OrganizationRef;
+  radio_group: RadioGroupRef | null;
+  rics: RicRef[];
+  status_code: number;
+  status_changed_at: string | null;
+  position: { latitude: number | null; longitude: number | null; source: string };
+  available: boolean;
+  availability_note: string | null;
+  crew_size: number | null;
+  description: string | null;
+  sim_speed_kmh: number | null;
+  effective_speed_kmh: number;
+  import_job_id: Uuid | null;
+}
+
+export interface Ric extends RicRef, Versioned {
+  control_center_id: Uuid;
+  description: string | null;
+  is_active: boolean;
+  stations: StationRef[];
+  vehicles: { id: Uuid; call_sign: string }[];
+}
+
+export interface AlarmGroup extends Versioned {
+  control_center_id: Uuid;
+  name: string;
+  description: string | null;
+  rics: RicRef[];
+}
+
+export interface RadioGroup extends RadioGroupRef, Versioned {
+  control_center_id: Uuid;
+  description: string | null;
+  stations: StationRef[];
+  organizations: OrganizationRef[];
+  vehicles: { id: Uuid; call_sign: string }[];
+}
+
+export interface ControlCenterArea extends Versioned {
+  control_center_id: Uuid;
+  name: string;
+  municipality_key: string | null;
+  geometry: { type: string; coordinates: unknown } | null;
+  priority: number;
+  description: string | null;
+}
+
+export interface ControlCenterLink {
+  id: Uuid;
+  from_control_center: ControlCenterRef;
+  to_control_center: ControlCenterRef;
+  kind: 'neighbor' | 'backup' | 'cooperation';
+  note: string | null;
+  created_at: string;
+}
+
+// ------------------------------------------------------------------ Phase 2: import
+export type ImportKind = 'vehicles' | 'stations';
+export type ImportAction = 'create' | 'update' | 'unchanged' | 'error' | 'skip';
+
+export interface ImportRowResult {
+  row: number;
+  action: ImportAction;
+  values: Record<string, string>;
+  errors: string[];
+  warnings: string[];
+  changes: string[];
+}
+
+export interface ImportJob {
+  id: Uuid;
+  control_center_id: Uuid;
+  kind: ImportKind;
+  status: 'uploaded' | 'validated' | 'committed' | 'discarded';
+  file_name: string;
+  sheet_name: string | null;
+  row_count: number;
+  summary: Record<ImportAction | 'total', number> | null;
+  created_at: string;
+  committed_at: string | null;
+  version: number;
+  headers: string[];
+  sample_rows: string[][];
+  sheets: string[];
+  fields: { key: string; label: string; required: boolean; hint: string }[];
+  column_mapping: Record<string, number | null> | null;
+  options: { update_existing?: boolean };
+  validation: ImportRowResult[] | null;
+}
+
+export type ImportJobSummary = Omit<ImportJob, 'headers' | 'sample_rows' | 'sheets' | 'fields' | 'column_mapping' | 'options' | 'validation'>;

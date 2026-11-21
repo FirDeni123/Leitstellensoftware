@@ -17,7 +17,7 @@ Freigabe.
 | Schnittstelle | Jede Schnittstelle trägt `is_real` und ist bei Anlage **deaktiviert**. Aktivierung realer Schnittstellen nur mit `interfaces.activate_real` und im Echtbetrieb | Phase 4 |
 | Kern | Im Simulationsmodus leitet der Kern Aufrufe realer Plugins auf das Simulations-Gateway um, unabhängig vom Plugin-Code | Phase 4 |
 | KI-Training | Der KI-Anrufer ist fest an den Provider `SimulatedTelephony` gebunden. Der Trainingspfad hat keine Code-Verbindung zum SIP-Provider. Ein Test stellt das sicher (Import-Grenze) | Phase 7 |
-| Polizei | Polizei ist eine Organisation mit `alarmable = false`. Es gibt keinen Alarmierungspfad, nur ein bestätigungspflichtiges Hinweisfenster | Phase 4 |
+| Polizei | Polizei ist eine Organisation mit `alarmable = false`, abgesichert durch einen Datenbank-Check-Constraint (✅). Polizeifahrzeuge können nicht angelegt oder importiert werden (✅). Es gibt keinen Alarmierungspfad, nur ein bestätigungspflichtiges Hinweisfenster (Phase 4) | ✅ / Phase 4 |
 | Daten | Spalten `mode`/`source` kennzeichnen simulierte Datensätze | ab Phase 3 |
 
 ## 3. Authentifizierung und Sitzungen (umgesetzt)
@@ -64,6 +64,16 @@ Freigabe.
   Backup/Restore.
 - Strukturierte JSON-Logs mit Anfrage-ID. Passwörter, Tokens und Schlüssel werden nie
   geloggt.
+
+## 5a. Datenimport (umgesetzt)
+
+- Nur `.xlsx`/`.csv`, max. 5 MB und 5000 Zeilen, max. 60 Spalten. Beschädigte Dateien führen
+  zu einer verständlichen Fehlermeldung, nicht zu einem Serverfehler.
+- Excel wird schreibgeschützt und ohne Makros/Formeln gelesen (`read_only`, `data_only`).
+- Nichts wird vor der ausdrücklichen Bestätigung geschrieben. Die Übernahme erfolgt in einer
+  Transaktion (ganz oder gar nicht) mit Protokolleintrag je Datensatz. Die Rohdaten der Datei
+  werden nach Übernahme oder Verwerfen gelöscht (Datenminimierung).
+- Import erfordert `data.import` **und** das Schreibrecht für die Zielart.
 
 ## 6. Geheimnisse
 

@@ -1,8 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { ApiError } from '@/api/http';
-import { useControlCenters } from '@/api/queries';
-import type { ControlCenter } from '@/api/types';
+import { useControlCenters, useList } from '@/api/queries';
+import type { ControlCenter, ControlCenterLink } from '@/api/types';
 import { EmptyState, ErrorAlert, Field, fmtDateTime } from '@/components/common';
 import { sysmsg } from '@/state/messages';
 import { hasPermission, useSession } from '@/state/session';
@@ -77,6 +77,68 @@ export function ControlCentersPanel(): ReactNode {
   );
 }
 
+const LINK_KIND = { neighbor: 'Nachbarleitstelle', backup: 'Ausfall-/Rückfallebene', cooperation: 'Kooperation' } as const;
+
+function LinksEditor({ cc, canWrite }: { cc: ControlCenter; canWrite: boolean }): ReactNode {
+  const api = useSession((s) => s.api)!;
+  const all = useControlCenters();
+  const links = useList<ControlCenterLink>('control-center-links', '/control-center-links', { control_center_id: cc.id });
+  const [target, setTarget] = useState('');
+  const [kind, setKind] = useState<ControlCenterLink['kind']>('neighbor');
+  const [error, setError] = useState<unknown>(null);
+  const qc = useQueryClient();
+  const refresh = () => qc.invalidateQueries({ queryKey: ['control-center-links'] });
+  const add = async () => {
+    setError(null);
+    try {
+      await api.post('/control-center-links', { from_control_center_id: cc.id, to_control_center_id: target, kind });
+      setTarget('');
+      await refresh();
+    } catch (e) {
+      setError(e);
+    }
+  };
+  const remove = async (id: string) => {
+    try {
+      await api.delete(`/control-center-links/${id}`);
+      await refresh();
+    } catch (e) {
+      setError(e);
+    }
+  };
+  return (
+    <>
+      <div className="section-title">Verknüpfte Leitstellen</div>
+      <ErrorAlert error={error} />
+      {(links.data ?? []).length === 0 && <div className="muted" style={{ fontSize: 'var(--fs-sm)' }}>keine Verknüpfungen</div>}
+      {(links.data ?? []).map((l) => {
+        const outgoing = l.from_control_center.id === cc.id;
+        const other = outgoing ? l.to_control_center : l.from_control_center;
+        return (
+          <div key={l.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' }}>
+            <span className="mono">{outgoing ? '→' : '←'} {other.code}</span>
+            <span>{LINK_KIND[l.kind]}</span>
+            {l.note && <span className="muted">{l.note}</span>}
+            {canWrite && outgoing && <button className="btn ghost sm" style={{ marginLeft: 'auto' }} onClick={() => void remove(l.id)}>Entfernen</button>}
+          </div>
+        );
+      })}
+      {canWrite && (
+        <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+          <select className="select" aria-label="Zielleitstelle" value={target} onChange={(e) => setTarget(e.target.value)} style={{ flex: 1, minWidth: 0 }}>
+            <option value="">Leitstelle wählen …</option>
+            {(all.data ?? []).filter((c) => c.id !== cc.id).map((c) => <option key={c.id} value={c.id}>{c.code} – {c.name}</option>)}
+          </select>
+          <select className="select" aria-label="Art der Verknüpfung" value={kind} onChange={(e) => setKind(e.target.value as ControlCenterLink['kind'])}>
+            {Object.entries(LINK_KIND).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+          </select>
+          <button className="btn sm" disabled={!target} onClick={() => void add()}>Verknüpfen</button>
+        </div>
+      )}
+    </>
+  );
+}
+
 function ControlCenterEditor(props: { cc?: ControlCenter; canWrite: boolean; onSaved: (id: string | null) => void }): ReactNode {
   const { cc, canWrite } = props;
   const api = useSession((s) => s.api)!;
@@ -143,6 +205,7 @@ function ControlCenterEditor(props: { cc?: ControlCenter; canWrite: boolean; onS
           {cc && hasPermission(me, 'system.admin') && <button className="btn danger" onClick={() => void remove()}>Löschen</button>}
         </div>
       )}
+      {cc && <LinksEditor cc={cc} canWrite={canWrite} />}
       {cc && (
         <>
           <div className="section-title">Metadaten</div>

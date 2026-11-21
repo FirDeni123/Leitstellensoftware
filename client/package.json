@@ -1,7 +1,7 @@
 {
   "name": "ils-client",
   "productName": "ILS-Sim Leitstelle",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "ILS-Sim – Windows-Client der Leitstellen-Simulation",
   "main": "./out/main/index.js",
   "private": true,

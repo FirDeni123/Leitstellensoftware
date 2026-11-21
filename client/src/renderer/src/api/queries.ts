@@ -24,7 +24,7 @@ export const TOPIC_INVALIDATIONS: Record<string, readonly (readonly string[])[]>
   'user.updated': [['users']],
   'role.changed': [['roles'], ['users']],
   'control_center.changed': [['control-centers']],
-  'audit.created': [['audit']],
+  'audit.created': [['audit'], ['import-jobs']],
   'system.mode_changed': [['system-info']],
 };
 
@@ -35,6 +35,11 @@ export function keysForTopic(topic: string): readonly (readonly string[])[] {
 export function installRealtimeInvalidation(client: QueryClient): () => void {
   const offEvent = onRealtimeEvent((event) => {
     for (const key of keysForTopic(event.topic)) void client.invalidateQueries({ queryKey: key });
+    // Generic master data event: the payload names the affected collection.
+    const collection = event.data['collection'];
+    if (event.topic === 'master_data.changed' && typeof collection === 'string') {
+      void client.invalidateQueries({ queryKey: [collection] });
+    }
   });
   // After a reconnect everything might be stale.
   const offResync = onResync(() => void client.invalidateQueries());
@@ -48,6 +53,16 @@ function useApi(): ApiClient {
   const api = useSession((s) => s.api);
   if (!api) throw new Error('Nicht angemeldet');
   return api;
+}
+
+/** Generic list query for a REST collection; key = [collection, params]. */
+export function useList<T>(collection: string, path: string, params: Record<string, string | undefined> = {}, enabled = true) {
+  const api = useApi();
+  return useQuery({
+    queryKey: [collection, params],
+    queryFn: () => api.get<T[]>(path, params),
+    enabled,
+  });
 }
 
 export function useSystemInfo() {

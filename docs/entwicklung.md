@@ -16,7 +16,7 @@ uv sync
 #   CREATE USER ils WITH PASSWORD 'ils_dev' CREATEDB; CREATE DATABASE ils OWNER ils; CREATE DATABASE ils_test OWNER ils;
 uv run alembic upgrade head
 uv run ils-admin bootstrap              # Rechte, Rollen, Administrator "admin" (Initialpasswort wird ausgegeben)
-uv run ils-admin seed-demo              # Demo-Leitstelle + Demo-Benutzer (Passwort: Demo-Passwort-2026!)
+uv run ils-admin seed-demo              # Demo-Leitstelle, -Benutzer, -Wachen, -Fahrzeuge (Passwort: Demo-Passwort-2026!)
 uv run uvicorn app.main:app --reload    # http://localhost:8000, API-Doku: /docs
 ```
 
@@ -38,10 +38,10 @@ Die Serveradresse wird in der Anmeldemaske unter „Server“ eingestellt.
 ## Tests
 
 ```bash
-cd server && uv run pytest -q                     # 51 Tests, echte PostgreSQL-Testdatenbank ils_test
+cd server && uv run pytest -q                     # 74 Tests, echte PostgreSQL-Testdatenbank ils_test
 cd server && uv run ruff check app tests && uv run ruff format --check app tests
-cd client && npm run typecheck && npm test        # 21 Unit-Tests (vitest)
-cd client && npm run build:web && npm run e2e     # 3 E2E-Tests (Server mit seed-demo muss laufen)
+cd client && npm run typecheck && npm test        # 28 Unit-Tests (vitest)
+cd client && npm run build:web && npm run e2e     # 5 E2E-Tests (Server mit seed-demo muss laufen)
 ```
 
 Server-Tests legen das Schema über die Alembic-Migrationen an. Damit werden die Migrationen
@@ -55,6 +55,9 @@ mitgetestet. Die Testdatenbank wird bei jedem Lauf vollständig neu aufgebaut.
   (Audit + Events). Neue Berechtigungen nur in `core/permissions.py` (werden beim Bootstrap
   synchronisiert). Schemaänderungen nur per Alembic-Migration
   (`uv run alembic revision --autogenerate -m "..."`, danach prüfen!).
+- **Neue Stammdaten:** Server: `CrudSpec` in `services/master_data.py` + `register_crud(...)`;
+  Client: `EntityConfig` in `modules/masterdata/configs.tsx` – Liste, Formular, Konflikte,
+  Protokoll und Echtzeit kommen automatisch.
 - **Client:** Neue Fenster in `modules/registry.ts` registrieren und in `PanelHost.tsx`
   verdrahten. Serverdaten über TanStack Query; Echtzeit-Topics in `TOPIC_INVALIDATIONS`
   eintragen. Farben nur über die Design-Tokens in `theme/theme.css`.
@@ -67,3 +70,7 @@ mitgetestet. Die Testdatenbank wird bei jedem Lauf vollständig neu aufgebaut.
 `npm run dist:win` auf Windows (oder per CI-Job `windows-installer`) erzeugt
 `client/release/ILS-Sim-Setup-<version>.exe` (NSIS, Installation pro Rechner). Für die
 Verteilung ohne SmartScreen-Warnung ist ein Code-Signing-Zertifikat nötig (Phase 8).
+
+## Beispieldaten für den Import
+
+`docs/beispiele/` enthält eine Wachen-CSV und eine Fahrzeug-Excel passend zu den Demo-Daten.

@@ -1,8 +1,8 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState, type ReactNode } from 'react';
 import { ApiError } from '@/api/http';
-import { useControlCenters, useRoles, useUsers } from '@/api/queries';
-import type { User, UserCreatedResponse } from '@/api/types';
+import { useControlCenters, usePermissions, useRoles, useUsers } from '@/api/queries';
+import type { Permission, PermissionOverride, User, UserCreatedResponse } from '@/api/types';
 import { EmptyState, ErrorAlert, Field, fmtDateTime, Modal } from '@/components/common';
 import { hasPermission, useSession } from '@/state/session';
 import { sysmsg } from '@/state/messages';
@@ -73,6 +73,8 @@ function UserEditor({ user, canWrite }: { user: User; canWrite: boolean }): Reac
   const [email, setEmail] = useState(user.email ?? '');
   const [userRoles, setUserRoles] = useState(user.roles);
   const [ccIds, setCcIds] = useState(user.control_centers.map((c) => c.id));
+  const [overrides, setOverrides] = useState<PermissionOverride[]>(user.permission_overrides);
+  const catalogue = usePermissions();
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const [password, setPassword] = useState<string | null>(null);
@@ -81,7 +83,8 @@ function UserEditor({ user, canWrite }: { user: User; canWrite: boolean }): Reac
 
   const dirty = displayName !== user.display_name || email !== (user.email ?? '') ||
     [...userRoles].sort().join() !== [...user.roles].sort().join() ||
-    [...ccIds].sort().join() !== user.control_centers.map((c) => c.id).sort().join();
+    [...ccIds].sort().join() !== user.control_centers.map((c) => c.id).sort().join() ||
+    JSON.stringify(overrides) !== JSON.stringify(user.permission_overrides);
 
   const run = async (fn: () => Promise<unknown>, success: string) => {
     setBusy(true);
@@ -102,7 +105,7 @@ function UserEditor({ user, canWrite }: { user: User; canWrite: boolean }): Reac
     display_name: displayName,
     email: email || null,
     control_center_ids: ccIds,
-    ...(canRoles ? { roles: userRoles } : {}),
+    ...(canRoles ? { roles: userRoles, permission_overrides: overrides } : {}),
   }), `Benutzer ${user.username} gespeichert`);
 
   const locked = !!user.locked_until && new Date(user.locked_until) > new Date();
@@ -147,10 +150,13 @@ function UserEditor({ user, canWrite }: { user: User; canWrite: boolean }): Reac
         {ccs.data?.length === 0 && <span className="muted">Keine Leitstellen angelegt</span>}
       </div>
 
+      <div className="section-title">Individuelle Rechte {!canRoles && <span className="muted">(Änderung erfordert roles.write)</span>}</div>
+      <OverridesEditor value={overrides} onChange={setOverrides} disabled={!canWrite || !canRoles} catalogue={catalogue.data ?? []} />
+
       {canWrite && (
         <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
           <button className="btn primary" disabled={!dirty || busy} onClick={() => void save()}>Speichern</button>
-          <button className="btn" disabled={!dirty || busy} onClick={() => { setDisplayName(user.display_name); setEmail(user.email ?? ''); setUserRoles(user.roles); setCcIds(user.control_centers.map((c) => c.id)); }}>Verwerfen</button>
+          <button className="btn" disabled={!dirty || busy} onClick={() => { setDisplayName(user.display_name); setEmail(user.email ?? ''); setUserRoles(user.roles); setCcIds(user.control_centers.map((c) => c.id)); setOverrides(user.permission_overrides); }}>Verwerfen</button>
         </div>
       )}
 
@@ -179,6 +185,40 @@ function UserEditor({ user, canWrite }: { user: User; canWrite: boolean }): Reac
         </div>
       )}
       {password && <InitialPasswordDialog username={user.username} password={password} onClose={() => setPassword(null)} />}
+    </div>
+  );
+}
+
+/** grant/deny exceptions on top of the roles (deny wins). */
+function OverridesEditor(props: { value: PermissionOverride[]; onChange: (v: PermissionOverride[]) => void; disabled: boolean; catalogue: Permission[] }): ReactNode {
+  const [code, setCode] = useState('');
+  const [effect, setEffect] = useState<'grant' | 'deny'>('grant');
+  const label = (c: string) => props.catalogue.find((p) => p.code === c)?.description ?? c;
+  const free = props.catalogue.filter((p) => !props.value.some((o) => o.permission_code === p.code));
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div className="chips">
+        {props.value.length === 0 && <span className="muted" style={{ fontSize: 'var(--fs-sm)' }}>keine – Rechte ergeben sich nur aus den Rollen</span>}
+        {props.value.map((o) => (
+          <span key={o.permission_code} className={`chip on ${o.effect === 'deny' ? 'deny' : ''}`} title={o.permission_code}>
+            {o.effect === 'grant' ? '+' : '−'} {label(o.permission_code)}
+            {!props.disabled && <button type="button" className="chip-x" aria-label="Ausnahme entfernen" onClick={() => props.onChange(props.value.filter((x) => x !== o))}>×</button>}
+          </span>
+        ))}
+      </div>
+      {!props.disabled && (
+        <div style={{ display: 'flex', gap: 6 }}>
+          <select className="select" aria-label="Berechtigung" value={code} onChange={(e) => setCode(e.target.value)} style={{ flex: 1, minWidth: 0 }}>
+            <option value="">Berechtigung wählen …</option>
+            {free.map((p) => <option key={p.code} value={p.code}>{p.area}: {p.description}</option>)}
+          </select>
+          <select className="select" aria-label="Wirkung" value={effect} onChange={(e) => setEffect(e.target.value as 'grant' | 'deny')}>
+            <option value="grant">gewähren</option>
+            <option value="deny">entziehen</option>
+          </select>
+          <button type="button" className="btn sm" disabled={!code} onClick={() => { props.onChange([...props.value, { permission_code: code, effect }]); setCode(''); }}>Hinzufügen</button>
+        </div>
+      )}
     </div>
   );
 }
