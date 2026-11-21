@@ -35,6 +35,7 @@ from app.models.operations import (
 )
 from app.models.proposals import Proposal, ProposalSettings
 from app.models.settings import OperationMode, SystemSetting, UserLayout
+from app.models.training import TrainingEvaluation, TrainingMessage, TrainingScenario, TrainingSession
 from app.models.user import (
     Permission,
     PermissionEffect,
@@ -56,6 +57,10 @@ __all__ = [
     "PoliceNotice",
     "Proposal",
     "TalkRequest",
+    "TrainingEvaluation",
+    "TrainingMessage",
+    "TrainingScenario",
+    "TrainingSession",
     "VehicleMovement",
     "VehicleStatusHistory",
     "ProposalSettings",

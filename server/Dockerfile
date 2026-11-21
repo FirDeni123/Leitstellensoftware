@@ -10,14 +10,17 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /usr/local/bin/uv
 WORKDIR /app
 
+# Optional extras, e.g. --build-arg ILS_EXTRAS="--extra speech" (local speech recognition, large)
+ARG ILS_EXTRAS=""
+
 # Dependencies first (better layer caching)
 COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
+RUN uv sync --frozen --no-dev --no-install-project ${ILS_EXTRAS}
 
 COPY app ./app
 COPY alembic ./alembic
 COPY alembic.ini ./
-RUN uv sync --frozen --no-dev
+RUN uv sync --frozen --no-dev ${ILS_EXTRAS}
 
 # Unprivileged runtime user
 RUN useradd --system --uid 10001 --home /app ils && chown -R ils /app

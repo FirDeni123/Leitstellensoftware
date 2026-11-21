@@ -112,7 +112,7 @@ async def list_calls(
     include_ended: bool = False,
     limit: int = Query(default=200, ge=1, le=500),
 ) -> Any:
-    service = CallService(uow, visible_control_centers(auth))
+    service = CallService(uow_for(auth, uow), visible_control_centers(auth))
     calls = await service.list(control_center_id, include_ended, limit)
     names = await service.handler_names(calls)
     incident_ids = {c.incident_id for c in calls if c.incident_id}

@@ -20,6 +20,7 @@ from app.models import (
     RadioGroup,
     Ric,
     Station,
+    TrainingScenario,
     Vehicle,
     VehicleType,
 )
@@ -94,6 +95,234 @@ ALARM_RULES: dict[str, tuple[tuple[int, str, int], ...]] = {
 }
 DEMO_INTERFACE = "Simulations-Empfänger (Demo)"
 
+# Fictional training scenarios for the AI caller (persons, numbers and addresses invented;
+# numbers in the 0000 block). keyword code, difficulty, persona, facts, opening line, checklist.
+TRAINING_SCENARIOS: tuple[dict, ...] = (
+    {
+        "title": "Pkw-Brand auf dem Parkplatz (Demo)",
+        "description": "Brennendes Auto auf einem Supermarktparkplatz, Anrufer ist Passant.",
+        "difficulty": "easy",
+        "keyword": "B2",
+        "persona": {
+            "name": "Jonas Beispiel",
+            "age": 34,
+            "role": "Passant mit Einkaufswagen",
+            "emotional_state": "angespannt, aber ruhig",
+            "speech_style": "kurze, klare Sätze",
+            "phone": "0000 1234567",
+        },
+        "facts": {
+            "address": "Industriestraße 30, 21493 Demostadt",
+            "lat": 53.4952,
+            "lon": 10.4968,
+            "location_hint": "Parkplatz vor dem Supermarkt, hintere Reihe am Zaun",
+            "situation": "Ein geparkter Kleinwagen brennt im Motorraum, Flammen schlagen unter der Haube hervor.",
+            "persons": "Niemand im Auto, der Besitzer ist nicht zu sehen.",
+            "injuries": "Keine Verletzten.",
+            "hazards": "Daneben stehen zwei weitere Autos, schwarzer Rauch zieht Richtung Eingang.",
+            "details": ["Das Auto ist ein roter Kleinwagen.", "Leute gehen schon auf Abstand."],
+            "unknown": ["Wem das Auto gehört", "Ob es ein Elektroauto ist"],
+        },
+        "opening_line": "Ja hallo, hier brennt ein Auto auf dem Parkplatz vom Supermarkt!",
+        "checklist": [],
+    },
+    {
+        "title": "Verkehrsunfall, Person eingeklemmt (Demo)",
+        "description": "Pkw gegen Baum auf der Landstraße, Fahrer im Fahrzeug eingeklemmt.",
+        "difficulty": "medium",
+        "keyword": "H-KLEMM",
+        "persona": {
+            "name": "Sabine Muster",
+            "age": 52,
+            "role": "Ersthelferin, hat angehalten",
+            "emotional_state": "aufgeregt, außer Atem",
+            "speech_style": "spricht schnell, wiederholt sich",
+            "phone": "0000 2345678",
+        },
+        "facts": {
+            "address": "Kreuzung Hauptstraße / Mühlenweg, Demostadt",
+            "lat": 53.5068,
+            "lon": 10.4901,
+            "location_hint": "ca. 200 m hinter der Kreuzung Richtung Demodorf, rechts am Baum",
+            "situation": "Ein Pkw ist von der Straße abgekommen und frontal gegen einen Baum geprallt.",
+            "persons": "Eine Person, der Fahrer, allein im Auto.",
+            "injuries": "Fahrer ist ansprechbar, blutet am Kopf, Beine eingeklemmt, kommt nicht raus.",
+            "hazards": "Aus dem Motorraum dampft es, kein Feuer. Auto steht halb auf der Fahrbahn.",
+            "details": ["Die Fahrertür klemmt.", "Ein zweiter Autofahrer sichert mit Warndreieck ab."],
+            "unknown": ["Name des Fahrers", "Ob der Fahrer Medikamente nimmt"],
+        },
+        "opening_line": "Hallo? Hier ist ein Unfall, ein Auto ist gegen einen Baum, der Mann kommt nicht raus!",
+        "checklist": [
+            {
+                "key": "ask_location",
+                "label": "Genauen Unfallort erfragt",
+                "required": True,
+                "hints": ["wo", "straße", "richtung", "kreuzung"],
+            },
+            {
+                "key": "ask_persons",
+                "label": "Anzahl Beteiligte erfragt",
+                "required": True,
+                "hints": ["wie viele", "personen", "jemand"],
+            },
+            {
+                "key": "ask_trapped",
+                "label": "Eingeklemmte Person erkannt/erfragt",
+                "required": True,
+                "hints": ["eingeklemmt", "raus", "befreien"],
+            },
+            {
+                "key": "ask_condition",
+                "label": "Zustand (Bewusstsein, Atmung) erfragt",
+                "required": True,
+                "hints": ["ansprechbar", "bewusst", "atmet", "blut"],
+            },
+            {
+                "key": "ask_hazards",
+                "label": "Gefahren (Brand, Verkehr) erfragt",
+                "required": False,
+                "hints": ["brennt", "feuer", "rauch", "verkehr"],
+            },
+            {
+                "key": "ask_callback",
+                "label": "Rückrufnummer erfragt",
+                "required": True,
+                "hints": ["nummer", "rückruf"],
+            },
+            {
+                "key": "give_advice",
+                "label": "Eigensicherung/Verhaltenshinweise gegeben",
+                "required": False,
+                "hints": ["sichern", "abstand", "warnweste", "bleiben sie"],
+            },
+        ],
+    },
+    {
+        "title": "Brustschmerz, Verdacht Herzinfarkt (Demo)",
+        "description": "Ehefrau meldet starke Brustschmerzen ihres Mannes in der Wohnung.",
+        "difficulty": "medium",
+        "keyword": "RD2",
+        "persona": {
+            "name": "Maria Probe",
+            "age": 67,
+            "role": "Ehefrau des Patienten",
+            "emotional_state": "besorgt, zittrige Stimme",
+            "speech_style": "höflich, etwas umständlich",
+            "phone": "0000 3456789",
+        },
+        "facts": {
+            "address": "Lindenweg 4, 21493 Demostadt",
+            "lat": 53.5091,
+            "lon": 10.4712,
+            "location_hint": "Erdgeschoss rechts, Name Probe an der Klingel",
+            "situation": "Ehemann (70) hat seit 20 Minuten starke Schmerzen in der Brust, die in den linken Arm ziehen.",
+            "persons": "Der Ehemann, sie ist mit ihm allein.",
+            "injuries": "Er ist ansprechbar, schwitzt stark, ist blass und hat Atemnot. Er hatte schon einmal einen Stent.",
+            "hazards": "Keine.",
+            "details": ["Er sitzt im Sessel im Wohnzimmer.", "Die Haustür ist abgeschlossen."],
+            "unknown": ["Welche Medikamente er genau nimmt"],
+        },
+        "opening_line": "Guten Tag, bitte, meinem Mann geht es ganz schlecht, er hat so Schmerzen in der Brust.",
+        "checklist": [
+            {
+                "key": "ask_location",
+                "label": "Adresse mit Klingel/Etage erfragt",
+                "required": True,
+                "hints": ["adresse", "wo", "straße", "klingel", "etage"],
+            },
+            {
+                "key": "ask_symptoms",
+                "label": "Beschwerden genauer erfragt",
+                "required": True,
+                "hints": ["schmerz", "seit wann", "arm", "atemnot"],
+            },
+            {
+                "key": "ask_conscious",
+                "label": "Bewusstsein und Atmung erfragt",
+                "required": True,
+                "hints": ["ansprechbar", "bewusst", "atmet"],
+            },
+            {
+                "key": "ask_history",
+                "label": "Vorerkrankungen erfragt",
+                "required": False,
+                "hints": ["vorerkrank", "herz", "medikament"],
+            },
+            {
+                "key": "ask_callback",
+                "label": "Rückrufnummer erfragt",
+                "required": True,
+                "hints": ["nummer", "rückruf"],
+            },
+            {
+                "key": "give_advice",
+                "label": "Hinweise gegeben (Tür öffnen, nicht allein lassen)",
+                "required": True,
+                "hints": ["tür", "aufschließen", "bleiben sie", "hinsetzen", "oberkörper"],
+            },
+        ],
+    },
+    {
+        "title": "Küchenbrand, Person in der Wohnung (Demo)",
+        "description": "Panischer Anrufer, Rauch im Treppenhaus, Nachbarin vermutlich noch in der Wohnung.",
+        "difficulty": "hard",
+        "keyword": "B-MIG",
+        "persona": {
+            "name": "Mehmet Fiktiv",
+            "age": 23,
+            "role": "Nachbar aus dem 1. Stock",
+            "emotional_state": "panisch, schreit zwischendurch",
+            "speech_style": "abgehackt, beantwortet nicht immer die gestellte Frage",
+            "phone": "0000 4567890",
+        },
+        "facts": {
+            "address": "Schulstraße 18, 21493 Demostadt",
+            "lat": 53.5012,
+            "lon": 10.4851,
+            "location_hint": "Mehrfamilienhaus, Brandwohnung 2. Obergeschoss links",
+            "situation": "Aus der Wohnung über ihm dringt dichter Rauch, im Küchenfenster sind Flammen zu sehen.",
+            "persons": "Die ältere Nachbarin (ca. 80) wohnt allein dort und öffnet nicht. Weitere Bewohner sind im Haus.",
+            "injuries": "Unbekannt, die Nachbarin antwortet nicht.",
+            "hazards": "Treppenhaus voller Rauch, er ist selbst noch in seiner Wohnung im 1. OG.",
+            "details": ["Er hört Rauchmelder piepen.", "Seine Wohnungstür ist zu."],
+            "unknown": ["Ob die Nachbarin zu Hause ist", "Wie viele Leute noch im Haus sind"],
+        },
+        "opening_line": "Feuer! Es brennt bei uns im Haus, da ist überall Rauch!",
+        "checklist": [
+            {
+                "key": "ask_location",
+                "label": "Adresse und Brandgeschoss erfragt",
+                "required": True,
+                "hints": ["adresse", "wo", "straße", "stock", "etage", "geschoss"],
+            },
+            {
+                "key": "ask_persons",
+                "label": "Vermisste/eingeschlossene Personen erfragt",
+                "required": True,
+                "hints": ["jemand", "personen", "noch drin", "nachbarin", "menschen"],
+            },
+            {
+                "key": "ask_caller_safe",
+                "label": "Eigene Lage des Anrufers erfragt",
+                "required": True,
+                "hints": ["wo sind sie", "in sicherheit", "ihre wohnung", "rauch bei ihnen"],
+            },
+            {
+                "key": "give_advice",
+                "label": "Verhaltenshinweis: Tür zu, nicht ins Treppenhaus, am Fenster bemerkbar machen",
+                "required": True,
+                "hints": ["tür zu", "nicht ins treppenhaus", "fenster", "bleiben sie", "tür geschlossen"],
+            },
+            {
+                "key": "ask_callback",
+                "label": "Rückrufnummer erfragt",
+                "required": True,
+                "hints": ["nummer", "rückruf"],
+            },
+        ],
+    },
+)
+
 AREA = {
     "type": "MultiPolygon",
     "coordinates": [[[[10.40, 53.45], [10.58, 53.45], [10.58, 53.56], [10.40, 53.56], [10.40, 53.45]]]],
@@ -104,7 +333,7 @@ async def seed_master_data(uow: UnitOfWork, cc: ControlCenter) -> dict[str, int]
     s = uow.session
     orgs = {o.key: o for o in (await s.scalars(select(Organization))).all()}
     types = {t.code: t for t in (await s.scalars(select(VehicleType))).all()}
-    counts = {"stations": 0, "vehicles": 0, "rics": 0, "radio_groups": 0}
+    counts = {"stations": 0, "vehicles": 0, "rics": 0, "radio_groups": 0, "training_scenarios": 0}
 
     stations = {
         st.short_name: st
@@ -209,6 +438,7 @@ async def seed_master_data(uow: UnitOfWork, cc: ControlCenter) -> dict[str, int]
         counts["vehicles"] += 1
     await s.flush()
     counts["alarm_rules"] = await _seed_alarming(uow, cc, types)
+    counts["training_scenarios"] = await _seed_training(uow, cc)
     if any(counts.values()):
         uow.audit(
             "seed",
@@ -216,10 +446,30 @@ async def seed_master_data(uow: UnitOfWork, cc: ControlCenter) -> dict[str, int]
             cc.id,
             f"Demo-Stammdaten angelegt ({counts['stations']} Wachen, {counts['vehicles']} Fahrzeuge, "
             f"{counts['rics']} RICs, {counts['radio_groups']} Funkrufgruppen, "
-            f"{counts['alarm_rules']} AAO)",
+            f"{counts['alarm_rules']} AAO, {counts['training_scenarios']} Übungsszenarien)",
             control_center_id=cc.id,
         )
     return counts
+
+
+async def _seed_training(uow: UnitOfWork, cc: ControlCenter) -> int:
+    s = uow.session
+    keywords = {k.code: k for k in (await s.scalars(select(Keyword))).all()}
+    existing = set(
+        (
+            await s.scalars(select(TrainingScenario.title).where(TrainingScenario.control_center_id == cc.id))
+        ).all()
+    )
+    created = 0
+    for raw in TRAINING_SCENARIOS:
+        if raw["title"] in existing:
+            continue
+        data = dict(raw)
+        keyword = keywords.get(data.pop("keyword"))
+        s.add(TrainingScenario(control_center_id=cc.id, keyword_id=keyword.id if keyword else None, **data))
+        created += 1
+    await s.flush()
+    return created
 
 
 async def _seed_alarming(uow: UnitOfWork, cc: ControlCenter, types: dict[str, VehicleType]) -> int:

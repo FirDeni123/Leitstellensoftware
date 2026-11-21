@@ -10,15 +10,17 @@ changes (PATCH) use optimistic locking.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 
 from app.core.errors import ConflictError, NotFoundError, PermissionDeniedError, ValidationFailedError
-from app.models import CallNote, EmergencyCall, Incident, User
+from app.models import CallNote, EmergencyCall, Incident, TrainingSession, User
 from app.services.incident_service import IncidentService, _call_text
 from app.services.uow import UnitOfWork, check_version
+from app.training import hooks as training_hooks
 
 CALL_FIELDS = (
     "priority",
@@ -83,6 +85,11 @@ class CallService:
             stmt = stmt.where(EmergencyCall.control_center_id.in_(self.visible or {uuid.uuid4()}))
         if not include_ended:
             stmt = stmt.where(EmergencyCall.status != "ended")
+        # Training calls appear (and ring) only for the person doing the exercise.
+        own_training = select(TrainingSession.call_id).where(
+            TrainingSession.trainee_id == self.uow.actor.user_id
+        )
+        stmt = stmt.where(or_(EmergencyCall.source != "training", EmergencyCall.id.in_(own_training)))
         stmt = stmt.order_by(EmergencyCall.priority, EmergencyCall.received_at).limit(limit)
         return list((await self.s.scalars(stmt)).all())
 
@@ -96,9 +103,18 @@ class CallService:
 
     # ---------------------------------------------------------------------------- inbound
     async def receive(
-        self, cc_id: uuid.UUID, *, source: str, priority: int = 3, **fields: Any
+        self,
+        cc_id: uuid.UUID,
+        *,
+        source: str,
+        priority: int = 3,
+        on_created: Callable[[EmergencyCall], Awaitable[None]] | None = None,
+        **fields: Any,
     ) -> EmergencyCall:
-        """Entry point for every incoming call – simulated, manual or (later) VoIP."""
+        """Entry point for every incoming call – simulated, manual, training or (later) VoIP.
+
+        ``on_created`` runs inside the same transaction (e.g. to attach a training session), so
+        the call never becomes visible without it."""
         self._check_cc(cc_id)
         call = EmergencyCall(
             id=uuid.uuid4(),
@@ -111,6 +127,8 @@ class CallService:
         )
         self.s.add(call)
         await self.s.flush()
+        if on_created is not None:
+            await on_created(call)
         who = call.caller_phone or "Rufnummer unterdrückt"
         self.uow.audit(
             "receive",
@@ -136,6 +154,8 @@ class CallService:
                     details={"handled_by": str(call.handled_by)},
                 )
             raise ConflictError("Notruf klingelt nicht mehr")
+        if call.source == "training":
+            await training_hooks.guard_handler(self.uow, call)
         await self._hold_my_other_calls(call)
         call.status = "active"
         call.handled_by = self.uow.actor.user_id
@@ -144,6 +164,8 @@ class CallService:
             "answer", "emergency_call", call.id, "Notruf angenommen", control_center_id=call.control_center_id
         )
         self._emit(call, "answered")
+        if call.source == "training":
+            await training_hooks.on_call_answered(self.uow, call)
         await self.uow.commit()
         return call
 
@@ -186,6 +208,8 @@ class CallService:
         call = await self.get(call_id, lock=True)
         if call.status != "on_hold":
             raise ConflictError("Der Notruf wird nicht gehalten")
+        if call.source == "training":
+            await training_hooks.guard_handler(self.uow, call)  # no takeover of exercises
         takeover = call.handled_by != self.uow.actor.user_id
         await self._hold_my_other_calls(call)
         call.status = "active"
@@ -202,11 +226,14 @@ class CallService:
         await self.uow.commit()
         return call
 
-    async def end(self, call_id: uuid.UUID, expected_version: int | None = None) -> EmergencyCall:
+    async def end(
+        self, call_id: uuid.UUID, expected_version: int | None = None, *, force: bool = False
+    ) -> EmergencyCall:
+        """``force``: an instructor ends a training call they are not handling themselves."""
         call = await self.get(call_id, lock=True)
         if call.status == "ended":
             return call
-        if call.status != "ringing":
+        if call.status != "ringing" and not force:
             self._require_handler(call)
         previous = call.status
         call.status = "ended"
@@ -214,6 +241,8 @@ class CallService:
         text = "Notruf beendet" if previous != "ringing" else "Notruf ohne Annahme beendet"
         self.uow.audit("end", "emergency_call", call.id, text, control_center_id=call.control_center_id)
         self._emit(call, "ended")
+        if call.source == "training":
+            await training_hooks.on_call_ended(self.uow, call, previous)
         await self.uow.commit()
         return call
 

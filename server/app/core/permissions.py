@@ -158,6 +158,12 @@ DEFAULT_ROLES: tuple[RoleDefinition, ...] = (
         frozenset(p.value for p in _OPERATIONS),
     ),
     RoleDefinition(
+        "instructor",
+        "Ausbilder",
+        "Disponent mit Ausbildermodus: Übungsszenarien, Beobachtung, Eingriffe, Auswertungen",
+        frozenset(p.value for p in _OPERATIONS | {P.TRAINING_INSTRUCTOR, P.SIMULATION_CONTROL}),
+    ),
+    RoleDefinition(
         "call_taker",
         "Einsatzbearbeiter",
         "Notrufannahme und Einsatzbearbeitung ohne Alarmierung",

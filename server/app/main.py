@@ -29,6 +29,7 @@ from app.api.routers import (
     operations,
     proposals,
     system,
+    training,
     users,
     ws,
 )
@@ -39,13 +40,14 @@ from app.core.logging import configure_logging, request_id_var
 from app.db.session import Database
 from app.plugins.registry import load_entry_points
 from app.proposal.travel import OsrmProvider
-from app.realtime.bus import create_bus
+from app.realtime.bus import BusMessage, create_bus
 from app.realtime.hub import ConnectionHub
 from app.services.alarm_delivery import recover_interrupted_deliveries
 from app.services.reference_data import ensure_reference_data
 from app.services.role_service import sync_catalogue
 from app.services.uow import UnitOfWork
 from app.simulation.runner import SimulationRunner
+from app.training.runtime import TrainingRuntime
 
 logger = logging.getLogger("app")
 
@@ -77,7 +79,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         load_entry_points()
         app.state.hub = ConnectionHub()
         app.state.bus = create_bus(settings.redis_url)
-        await app.state.bus.start(app.state.hub.handle)
+        app.state.training = TrainingRuntime(app.state)
+
+        async def dispatch(message: BusMessage) -> None:
+            await app.state.hub.handle(message)
+            await app.state.training.observe(message)
+
+        await app.state.bus.start(dispatch)
         await _synchronise_catalogues(app)
         app.state.simulation = None
         if settings.simulation_tick_seconds > 0:
@@ -92,6 +100,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         finally:
             if app.state.simulation is not None:
                 await app.state.simulation.stop()
+            await app.state.training.stop()
             await app.state.hub.close_all()
             await app.state.bus.stop()
             await app.state.db.dispose()
@@ -167,6 +176,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     api.include_router(interfaces.router)
     api.include_router(proposals.router)
     api.include_router(fleet.router)
+    api.include_router(training.router)
     api.include_router(system.router)
     api.include_router(ws.router)
     app.include_router(api)

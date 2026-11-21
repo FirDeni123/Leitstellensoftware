@@ -35,6 +35,7 @@ ADMIN_PASSWORD = "Test-Admin-Pass-1!"
 USER_PASSWORD = "Test-User-Pass-1!"
 
 DATA_TABLES = (
+    "training_evaluations, training_messages, training_sessions, training_scenarios, "
     "vehicle_movements, talk_requests, vehicle_status_history, "
     "proposals, proposal_settings, "
     "interface_events, alarm_targets, alarms, police_notices, alarm_rule_items, alarm_rules, interfaces, "

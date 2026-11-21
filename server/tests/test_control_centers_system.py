@@ -66,7 +66,7 @@ async def test_system_info_and_default_simulation_mode(client, dispo_headers):
     assert info["operation_mode"] == "simulation"
     assert info["realtime_backend"] == "memory"
     statuses = {m["key"]: m["status"] for m in info["modules"]}
-    assert statuses["auth"] == "available" and statuses["ai_caller"] == "planned"
+    assert statuses["auth"] == "available" and statuses["ai_caller"] == "available"
 
 
 async def test_operation_mode_switch_requires_permission_and_confirmation(

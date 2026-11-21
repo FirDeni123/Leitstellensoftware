@@ -15,7 +15,7 @@ from app.services.uow import UnitOfWork, check_version
 MODE_KEY = "operation_mode"
 REAL_MODE_CONFIRMATION = "ECHTBETRIEB"
 
-WORKSTATIONS = ("call_taking", "dispatch", "radio", "management", "admin")
+WORKSTATIONS = ("call_taking", "dispatch", "radio", "management", "admin", "training")
 
 # Transparent implementation status of every planned module (shown in the client).
 MODULES: tuple[ModuleStatus, ...] = (
@@ -72,7 +72,7 @@ MODULES: tuple[ModuleStatus, ...] = (
         name="Notrufannahme (simulierte und manuell erfasste Anrufe)",
         phase=3,
         status="available",
-        note="Sprache/VoIP folgen mit Phase 7",
+        note="Übungsanrufe mit KI-Anrufer seit Phase 7; echte Telefonie/VoIP nicht angebunden",
     ),
     ModuleStatus(
         key="incidents",
@@ -115,8 +115,22 @@ MODULES: tuple[ModuleStatus, ...] = (
         status="available",
         note="Straßengenaue Fahrten mit OSRM (Container); ohne Routing gekennzeichnete Luftlinie",
     ),
-    ModuleStatus(key="voice", name="Sprach- und Telefoniesimulation", phase=7, status="planned"),
-    ModuleStatus(key="ai_caller", name="KI-Anrufsimulation und Ausbildermodus", phase=7, status="planned"),
+    ModuleStatus(
+        key="ai_caller",
+        name="KI-Anrufsimulation und Ausbildermodus",
+        phase=7,
+        status="available",
+        note="Claude (vom Administrator einzuschalten) oder regelbasierter Anrufer ohne KI; "
+        "Szenario-Editor, Beobachten, Eingriffe, automatische Auswertung",
+    ),
+    ModuleStatus(
+        key="voice",
+        name="Sprache im Übungsgespräch",
+        phase=7,
+        status="partial",
+        note="Sprachausgabe über Windows-Stimmen; Spracherkennung nur mit optionalem faster-whisper "
+        "auf dem Server; Piper und Gesprächsaufzeichnung noch nicht umgesetzt; keine echte Telefonie",
+    ),
     ModuleStatus(
         key="interfaces",
         name="Schnittstellen und Plugins",
@@ -165,6 +179,11 @@ class SystemService:
             stopped = await Fleet(self.uow).stop_all("Wechsel in den Echtbetrieb")
             if stopped:
                 reason = f"{reason} – {stopped} simulierte Fahrt(en) beendet"
+            from app.services.training_service import cancel_open_sessions
+
+            cancelled = await cancel_open_sessions(self.uow, "Wechsel in den Echtbetrieb")
+            if cancelled:
+                reason = f"{reason} – {cancelled} laufende Übung(en) abgebrochen"
         if mode == OperationMode.SIMULATION:
             # Leaving real operation: every real interface is switched off (clear separation).
             from app.services.interface_service import disable_real_interfaces

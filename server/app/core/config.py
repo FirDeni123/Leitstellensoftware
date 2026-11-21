@@ -13,7 +13,7 @@ from functools import lru_cache
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-APP_VERSION = "0.6.0"
+APP_VERSION = "0.7.0"
 
 _DEV_JWT_SECRET = "dev-only-insecure-jwt-secret-change-me-0123456789"  # noqa: S105
 # Fernet key used only for development/tests (base64, 32 bytes). Never valid in production.
@@ -48,6 +48,14 @@ class Settings(BaseSettings):
     map_tile_url: str = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
     map_tile_attribution: str = "© OpenStreetMap-Mitwirkende"
     map_max_zoom: int = 19
+    # AI caller (Phase 7). The key may also be stored encrypted by an administrator in the UI.
+    # The base URL is set explicitly – never inherited from ANTHROPIC_* process variables.
+    anthropic_api_key: str | None = None
+    anthropic_base_url: str = "https://api.anthropic.com"
+    anthropic_timeout_seconds: float = 30.0
+    # Optional speech recognition (faster-whisper, not installed by default).
+    stt_model: str = "small"
+    stt_device: str = "cpu"
 
     # --- HTTP -----------------------------------------------------------------------------
     # app://ils is the origin of the packaged Windows client; localhost ports are the

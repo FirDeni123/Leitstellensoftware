@@ -65,6 +65,14 @@ class ConflictError(AppError):
     message = "Der Datensatz wurde zwischenzeitlich geändert"
 
 
+class NotAvailableError(AppError):
+    """An optional component is not installed or not configured on this server."""
+
+    status_code = 501
+    code = "not_available"
+    message = "Funktion auf diesem Server nicht verfügbar"
+
+
 class ValidationFailedError(AppError):
     status_code = 422
     code = "validation_failed"

@@ -1,6 +1,6 @@
 [project]
 name = "ils-server"
-version = "0.6.0"
+version = "0.7.0"
 description = "ILS-Sim – zentraler Server (API, Echtzeit, Simulation) für die Leitstellen-Simulation"
 requires-python = ">=3.12"
 dependencies = [
@@ -19,7 +19,12 @@ dependencies = [
     "openpyxl>=3.1",
     "python-multipart>=0.0.20",
     "jsonschema>=4.23",
+    "anthropic>=2.12,<3",
 ]
+
+[project.optional-dependencies]
+# Local speech recognition for training calls (large; not installed by default): uv sync --extra speech
+speech = ["faster-whisper>=1.1"]
 
 [dependency-groups]
 dev = [
@@ -55,3 +60,4 @@ ignore = ["S101", "B008"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S105", "S106"]
+"app/demo_data.py" = ["E501"]  # long German scenario texts

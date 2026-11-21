@@ -57,6 +57,11 @@ services:
       ILS_OSRM_URL: ${ILS_OSRM_URL:-}
       ILS_MAP_TILE_URL: ${ILS_MAP_TILE_URL:-https://tile.openstreetmap.org/{z}/{x}/{y}.png}
       ILS_MAP_TILE_ATTRIBUTION: ${ILS_MAP_TILE_ATTRIBUTION:-© OpenStreetMap-Mitwirkende}
+      # AI caller for exercises – off until an administrator enables it (key preferably in the UI).
+      ILS_ANTHROPIC_API_KEY: ${ILS_ANTHROPIC_API_KEY:-}
+      ILS_ANTHROPIC_BASE_URL: ${ILS_ANTHROPIC_BASE_URL:-https://api.anthropic.com}
+      ILS_STT_MODEL: ${ILS_STT_MODEL:-small}
+      ILS_STT_DEVICE: ${ILS_STT_DEVICE:-cpu}
     networks: [backend]
 
   # Optional (profile "routing"): OSRM with a prepared regional extract, see

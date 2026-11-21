@@ -153,7 +153,14 @@ async def test_admin_password_reset_generates_password(client, admin_headers):
 
 async def test_role_management(client, admin_headers):
     roles = (await client.get("/roles", headers=admin_headers)).json()
-    assert {r["key"] for r in roles} == {"admin", "lead", "dispatcher", "call_taker", "observer"}
+    assert {r["key"] for r in roles} == {
+        "admin",
+        "lead",
+        "dispatcher",
+        "instructor",
+        "call_taker",
+        "observer",
+    }
     r = await client.post(
         "/roles",
         headers=admin_headers,

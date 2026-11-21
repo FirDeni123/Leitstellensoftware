@@ -44,6 +44,7 @@ DEMO_USERS = (
     ("admin.demo", "Administrator Demo", "admin"),
     ("lead.demo", "Leitstellenleitung Demo", "lead"),
     ("dispo.demo", "Disponent Demo", "dispatcher"),
+    ("ausbilder.demo", "Ausbilder Demo", "instructor"),
     ("annahme.demo", "Einsatzbearbeiter Demo", "call_taker"),
     ("beobachter.demo", "Beobachter Demo", "observer"),
 )
@@ -98,6 +99,7 @@ async def bootstrap(admin_username: str, admin_password: str | None) -> None:
 async def seed_demo(password: str) -> None:
     async def run(uow: UnitOfWork) -> None:
         s = uow.session
+        await sync_catalogue(uow)  # roles introduced by newer versions (e.g. "instructor")
         cc = await s.scalar(select(ControlCenter).where(ControlCenter.code == DEMO_CONTROL_CENTER["code"]))
         if cc is None:
             cc = ControlCenter(**DEMO_CONTROL_CENTER)
