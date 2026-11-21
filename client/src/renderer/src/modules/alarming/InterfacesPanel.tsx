@@ -10,7 +10,7 @@ import { useInterfaceEvents, useInterfaces, useList, usePlugins } from '@/api/qu
 import type { InterfaceItem, InterfaceScope, PluginInfo } from '@/api/types';
 import { EmptyState, ErrorAlert, Field, fmtDateTime, fmtTime, Modal } from '@/components/common';
 import { SchemaForm } from '@/components/SchemaForm';
-import { missingRequired } from '@/components/schemaForm';
+import { missingRequired } from '@/components/schemaFormLogic';
 import { EditNotices, useEditBase } from '@/components/useEditBase';
 import { sysmsg } from '@/state/messages';
 import { hasPermission, useSession } from '@/state/session';

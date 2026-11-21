@@ -33,6 +33,9 @@
   Schulungsservern im Produktionsmodus mit `--allow-production` ausführen.
 
 ### Behoben (während der Entwicklung gefunden)
+- Client-Build unter Windows schlug fehl: `SchemaForm.tsx` und `schemaForm.ts` unterschieden
+  sich nur in der Schreibweise (unter Windows dieselbe Datei). Hilfsdatei umbenannt, Test
+  verhindert solche Namensdoppelungen künftig.
 - Live-Listen konnten veraltet bleiben, wenn ein Ereignis während eines laufenden
   Ladevorgangs eintraf.
 - Übungsanrufe erschienen (mit Signalton) bei allen Disponenten der Leitstelle – jetzt nur bei

@@ -1,7 +1,7 @@
 /** Configuration form generated from a plugin's JSON Schema (string, number, boolean, enum). */
 import type { ReactNode } from 'react';
 import type { JsonObjectSchema } from '@/api/types';
-import { coerceValue, fieldError, setConfigValue } from './schemaForm';
+import { coerceValue, fieldError, setConfigValue } from './schemaFormLogic';
 
 export function SchemaForm({ schema, value, onChange, disabled }: {
   schema: JsonObjectSchema;

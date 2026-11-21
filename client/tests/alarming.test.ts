@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { JsonObjectSchema } from '@/api/types';
-import { coerceValue, fieldError, missingRequired, setConfigValue } from '@/components/schemaForm';
+import { coerceValue, fieldError, missingRequired, setConfigValue } from '@/components/schemaFormLogic';
 import { deliverySummary, hasTargets, newIdempotencyKey, toggle } from '@/modules/alarming/labels';
 import { usePoliceNoticeQueue } from '@/modules/alarming/policeNotices';
 import { keysForTopic } from '@/api/queries';
