@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  server:
+    name: Server – Lint und Tests
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ils
+          POSTGRES_PASSWORD: ils_dev
+          POSTGRES_DB: ils_test
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U ils" --health-interval 5s --health-retries 20
+      redis:
+        image: redis:7
+        ports: ["6379:6379"]
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.13"
+      - run: uv sync --frozen
+      - run: uv run ruff check app tests
+      - run: uv run ruff format --check app tests
+      - run: uv run pytest -q
+
+  client:
+    name: Client – Typecheck und Unit-Tests
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  windows-installer:
+    name: Windows-Installationspaket
+    needs: [client]
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: client
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci
+      - run: npm run dist:win
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ILS-Sim-Setup
+          path: client/release/*.exe

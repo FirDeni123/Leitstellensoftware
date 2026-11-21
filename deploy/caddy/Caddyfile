@@ -1,0 +1,17 @@
+# TLS-Reverse-Proxy vor der API.
+# "tls internal" erzeugt eine eigene Zertifizierungsstelle (geeignet für interne Netze ohne
+# öffentlichen DNS-Namen). Das CA-Zertifikat liegt danach im Volume caddy-data unter
+# /data/caddy/pki/authorities/local/root.crt und muss auf den Windows-Clients als
+# vertrauenswürdig importiert werden (siehe docs/betrieb/ubuntu-server.md).
+# Mit öffentlichem DNS-Namen "tls internal" entfernen -> automatisch Let's Encrypt.
+{$ILS_SERVER_NAME} {
+	tls internal
+	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options nosniff
+		Referrer-Policy no-referrer
+		-Server
+	}
+	reverse_proxy api:8000
+}
