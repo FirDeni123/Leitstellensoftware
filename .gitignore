@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.ruff_cache/
+# Node / Electron
+node_modules/
+client/out/
+client/dist/
+client/release/
+client/test-results/
+client/playwright-report/
+# Config / secrets
+.env
+*.env.local
+deploy/.env
+deploy/secrets/
+# OS
+.DS_Store
+Thumbs.db

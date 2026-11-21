@@ -1,0 +1,54 @@
+[project]
+name = "ils-server"
+version = "0.1.0"
+description = "ILS-Sim – zentraler Server (API, Echtzeit, Simulation) für die Leitstellen-Simulation"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.165",
+    "uvicorn[standard]>=0.54",
+    "sqlalchemy[asyncio]>=2.1",
+    "asyncpg>=0.32",
+    "alembic>=1.20",
+    "pydantic>=2.14",
+    "pydantic-settings>=2.16",
+    "argon2-cffi>=25.1",
+    "pyjwt>=2.15",
+    "cryptography>=50.0",
+    "redis>=8.1",
+    "httpx>=0.28",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.16.2",
+    "pytest>=9.2",
+    "pytest-asyncio>=1.5",
+    "ruff>=0.14",
+]
+
+[project.scripts]
+ils-admin = "app.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "ASYNC", "S"]
+ignore = ["S101", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S105", "S106"]

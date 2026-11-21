@@ -1,0 +1,35 @@
+"""All ORM models – imported here so Alembic and the metadata see every table."""
+
+from app.models.audit import AuditLog
+from app.models.auth import AuthSession, LoginEvent, RefreshToken
+from app.models.control_center import ControlCenter
+from app.models.settings import OperationMode, SystemSetting, UserLayout
+from app.models.user import (
+    Permission,
+    PermissionEffect,
+    Role,
+    User,
+    UserPermissionOverride,
+    role_permissions,
+    user_control_centers,
+    user_roles,
+)
+
+__all__ = [
+    "AuditLog",
+    "AuthSession",
+    "ControlCenter",
+    "LoginEvent",
+    "OperationMode",
+    "Permission",
+    "PermissionEffect",
+    "RefreshToken",
+    "Role",
+    "SystemSetting",
+    "User",
+    "UserLayout",
+    "UserPermissionOverride",
+    "role_permissions",
+    "user_control_centers",
+    "user_roles",
+]
