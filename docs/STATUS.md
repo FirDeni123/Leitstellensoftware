@@ -5,8 +5,7 @@
 **Testergebnis zuletzt:** Server 122/122 ✅ · Client-Unit 40/40 ✅ · E2E 11/11 ✅ (dreimal in Folge) ·
 Ruff ✅ · TypeScript ✅ · `alembic check` ✅
 
-**Repository:** https://github.com/FirDeni123/Leitstellensoftware (Branch `main`). Phase 5 liegt
-als lokaler Commit vor und wird vom Projektinhaber hochgeladen.
+**Repository:** https://github.com/FirDeni123/Leitstellensoftware (Branch `main`).
 
 ## Phase 5 – Einsatzmittelvorschlag (umgesetzt und getestet)
 
