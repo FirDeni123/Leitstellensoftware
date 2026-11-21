@@ -35,6 +35,7 @@ ADMIN_PASSWORD = "Test-Admin-Pass-1!"
 USER_PASSWORD = "Test-User-Pass-1!"
 
 DATA_TABLES = (
+    "vehicle_movements, talk_requests, vehicle_status_history, "
     "proposals, proposal_settings, "
     "interface_events, alarm_targets, alarms, police_notices, alarm_rule_items, alarm_rules, interfaces, "
     "call_notes, emergency_calls, incident_events, incident_vehicles, incidents, incident_number_sequences, "
@@ -56,6 +57,7 @@ def settings() -> Settings:
         log_json=False,
         max_failed_logins=3,
         ws_heartbeat_seconds=0.5,
+        simulation_tick_seconds=0,  # tests drive the simulation explicitly
     )
 
 

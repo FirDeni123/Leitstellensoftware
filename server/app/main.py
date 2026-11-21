@@ -22,6 +22,7 @@ from app.api.routers import (
     alarming,
     auth,
     control_centers,
+    fleet,
     imports,
     interfaces,
     master_data,
@@ -44,6 +45,7 @@ from app.services.alarm_delivery import recover_interrupted_deliveries
 from app.services.reference_data import ensure_reference_data
 from app.services.role_service import sync_catalogue
 from app.services.uow import UnitOfWork
+from app.simulation.runner import SimulationRunner
 
 logger = logging.getLogger("app")
 
@@ -77,6 +79,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.bus = create_bus(settings.redis_url)
         await app.state.bus.start(app.state.hub.handle)
         await _synchronise_catalogues(app)
+        app.state.simulation = None
+        if settings.simulation_tick_seconds > 0:
+            app.state.simulation = SimulationRunner(app.state, settings.simulation_tick_seconds)
+            await app.state.simulation.start()
         logger.info(
             "Server gestartet",
             extra={"ctx": {"version": APP_VERSION, "env": settings.environment, "bus": app.state.bus.name}},
@@ -84,6 +90,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         try:
             yield
         finally:
+            if app.state.simulation is not None:
+                await app.state.simulation.stop()
             await app.state.hub.close_all()
             await app.state.bus.stop()
             await app.state.db.dispose()
@@ -158,6 +166,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     api.include_router(alarming.router)
     api.include_router(interfaces.router)
     api.include_router(proposals.router)
+    api.include_router(fleet.router)
     api.include_router(system.router)
     api.include_router(ws.router)
     app.include_router(api)

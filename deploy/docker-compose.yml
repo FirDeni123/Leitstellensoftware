@@ -3,7 +3,8 @@
 #   cp .env.example .env   # Werte setzen (scripts/install-ubuntu.sh erzeugt Geheimnisse)
 #   docker compose up -d
 #
-# Dienste: PostgreSQL (Daten), Redis (Echtzeit-Bus zwischen API-Prozessen), API, Caddy (TLS).
+# Dienste: PostgreSQL (Daten), Redis (Echtzeit-Bus zwischen API-Prozessen), API, Caddy (TLS),
+# optional OSRM (Routing, Profil "routing").
 # Nur Caddy ist von außen erreichbar (Port 443). Datenbank und Redis bleiben im internen Netz.
 
 name: ils-sim
@@ -52,6 +53,21 @@ services:
       ILS_TRUSTED_PROXY_COUNT: "1"
       ILS_WORKERS: ${ILS_WORKERS:-2}
       ILS_CORS_ORIGINS: '["app://ils"]'
+      # Routing for travel times and simulated drives; empty = straight-line estimate.
+      ILS_OSRM_URL: ${ILS_OSRM_URL:-}
+      ILS_MAP_TILE_URL: ${ILS_MAP_TILE_URL:-https://tile.openstreetmap.org/{z}/{x}/{y}.png}
+      ILS_MAP_TILE_ATTRIBUTION: ${ILS_MAP_TILE_ATTRIBUTION:-© OpenStreetMap-Mitwirkende}
+    networks: [backend]
+
+  # Optional (profile "routing"): OSRM with a prepared regional extract, see
+  # scripts/prepare-osrm.sh. Start with: docker compose --profile routing up -d
+  osrm:
+    image: ghcr.io/project-osrm/osrm-backend:v5.27.1
+    profiles: [routing]
+    restart: unless-stopped
+    command: ["osrm-routed", "--algorithm", "mld", "--max-table-size", "1000", "/data/region.osrm"]
+    volumes:
+      - ./osrm-data:/data:ro
     networks: [backend]
 
   proxy:

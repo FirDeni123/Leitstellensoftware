@@ -493,9 +493,26 @@ class IncidentService:
             control_center_id=incident.control_center_id,
         )
         self.emit(incident, "vehicles")
+        await self._simulate_return(assignment.vehicle)
         await self.uow.commit()
         await self.s.refresh(incident)
         return incident
+
+    async def _simulate_return(self, vehicle: Vehicle) -> None:
+        """Simulation: a released vehicle that is out on the road reports status 1 and drives back."""
+        from app.models import OperationMode
+        from app.services.system_service import SystemService
+        from app.services.vehicle_status_service import VehicleStatusService
+        from app.simulation.fleet import Fleet, at_station
+
+        if await SystemService(self.uow).operation_mode() != OperationMode.SIMULATION:
+            return
+        fleet = Fleet(self.uow)
+        await fleet.stop(vehicle, "freigegeben")
+        if not at_station(vehicle) and vehicle.position_source != "gps":
+            await fleet.plan_return(vehicle)
+            if vehicle.status_code != 1:
+                await VehicleStatusService(self.uow, None).set_status(vehicle.id, 1, source="simulation")
 
     async def active_assignments(
         self, control_center_id: uuid.UUID

@@ -193,6 +193,8 @@ class IncidentSummary(ApiModel):
     status: IncidentStatus
     priority: int
     address: str | None
+    latitude: float | None = None
+    longitude: float | None = None
     created_at: datetime
     status_changed_at: datetime
     vehicles: list[str] = Field(description="Funkrufnamen der aktuell zugeordneten Fahrzeuge")

@@ -13,7 +13,7 @@ from functools import lru_cache
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-APP_VERSION = "0.5.0"
+APP_VERSION = "0.6.0"
 
 _DEV_JWT_SECRET = "dev-only-insecure-jwt-secret-change-me-0123456789"  # noqa: S105
 # Fernet key used only for development/tests (base64, 32 bytes). Never valid in production.
@@ -41,6 +41,13 @@ class Settings(BaseSettings):
     # OSRM routing service for travel times (Phase 5/6); None = straight-line estimate only.
     osrm_url: str | None = None
     osrm_timeout_seconds: float = 2.0
+    # Vehicle simulation (Phase 6): tick interval; 0 disables the background runner (tests).
+    simulation_tick_seconds: float = 1.0
+    # Map tiles. The default OSM servers are for development/low traffic only (usage policy);
+    # production: own tiles (e.g. PMTiles/raster extract) or a commercial provider.
+    map_tile_url: str = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+    map_tile_attribution: str = "© OpenStreetMap-Mitwirkende"
+    map_max_zoom: int = 19
 
     # --- HTTP -----------------------------------------------------------------------------
     # app://ils is the origin of the packaged Windows client; localhost ports are the

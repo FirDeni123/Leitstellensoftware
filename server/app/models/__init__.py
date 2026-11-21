@@ -12,6 +12,7 @@ from app.models.alarming import (
 from app.models.audit import AuditLog
 from app.models.auth import AuthSession, LoginEvent, RefreshToken
 from app.models.control_center import ControlCenter, ControlCenterArea, ControlCenterLink
+from app.models.fleet import TalkRequest, VehicleMovement, VehicleStatusHistory
 from app.models.imports import ImportJob
 from app.models.master_data import (
     AlarmGroup,
@@ -54,6 +55,9 @@ __all__ = [
     "InterfaceEvent",
     "PoliceNotice",
     "Proposal",
+    "TalkRequest",
+    "VehicleMovement",
+    "VehicleStatusHistory",
     "ProposalSettings",
     "CallNote",
     "EmergencyCall",

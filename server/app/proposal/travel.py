@@ -80,6 +80,33 @@ class OsrmProvider:
             result.append((float(d), float(m or 0.0)) if d is not None else None)
         return result
 
+    async def route(self, origin: Point, dest: Point) -> tuple[list[list[float]], list[float], float]:
+        """Full route: geometry ``[[lon, lat], …]``, duration per segment (s), distance (m)."""
+        coords = f"{origin[1]:.6f},{origin[0]:.6f};{dest[1]:.6f},{dest[0]:.6f}"
+        url = f"{self.base_url}/route/v1/driving/{coords}"
+        params = {"overview": "full", "geometries": "geojson", "annotations": "duration"}
+        async with httpx.AsyncClient(timeout=self.timeout, transport=TRANSPORT) as client:
+            response = await client.get(url, params=params)
+        response.raise_for_status()
+        body = response.json()
+        if body.get("code") != "Ok" or not body.get("routes"):
+            raise ValueError(f"OSRM: {body.get('code')}")
+        route = body["routes"][0]
+        geometry = [[float(x), float(y)] for x, y in route["geometry"]["coordinates"]]
+        durations = [
+            float(d) for leg in route.get("legs", []) for d in leg.get("annotation", {}).get("duration", [])
+        ]
+        if len(durations) != len(geometry) - 1:  # no usable annotation: spread the total evenly by distance
+            durations = []
+        if not durations and len(geometry) >= 2:
+            total = float(route["duration"])
+            lengths = [
+                haversine_m(a[1], a[0], b[1], b[0]) for a, b in zip(geometry, geometry[1:], strict=False)
+            ]
+            whole = sum(lengths) or 1.0
+            durations = [total * part / whole for part in lengths]
+        return geometry, durations, float(route["distance"])
+
 
 async def travel_times(
     origins: list[Point | None],

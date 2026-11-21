@@ -19,3 +19,4 @@ deploy/secrets/
 # OS
 .DS_Store
 Thumbs.db
+deploy/osrm-data/

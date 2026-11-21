@@ -50,7 +50,7 @@ MODULES: tuple[ModuleStatus, ...] = (
         name="Fahrzeuge und Statusbezeichnungen",
         phase=2,
         status="available",
-        note="Statuswechsel im Betrieb folgen mit Phase 6",
+        note="Statuswechsel im Betrieb über die Fahrzeugübersicht",
     ),
     ModuleStatus(
         key="rics",
@@ -79,7 +79,7 @@ MODULES: tuple[ModuleStatus, ...] = (
         name="Einsatzbearbeitung, Einsatzverlauf, Stichwortkatalog",
         phase=3,
         status="available",
-        note="„Alarmiert“ wird durch die Alarmierung gesetzt; „Anfahrt/Am Einsatzort“ ab Phase 6",
+        note="„Alarmiert“ durch die Alarmierung, „Anfahrt/Am Einsatzort“ aus Status 3/4",
     ),
     ModuleStatus(
         key="alarming",
@@ -101,8 +101,20 @@ MODULES: tuple[ModuleStatus, ...] = (
         status="available",
         note="Fahrzeit geschätzt (Luftlinie × Umwegfaktor) oder per OSRM, falls eingerichtet",
     ),
-    ModuleStatus(key="vehicle_status", name="Fahrzeugstatus und Sprechwünsche", phase=6, status="planned"),
-    ModuleStatus(key="map", name="Karte und GPS-Simulation", phase=6, status="planned"),
+    ModuleStatus(
+        key="vehicle_status",
+        name="Fahrzeugstatus, Statushistorie und Sprechwünsche",
+        phase=6,
+        status="available",
+        note="Status manuell oder aus der Simulation; reale FMS-/TETRA-Anbindung als späteres Plugin",
+    ),
+    ModuleStatus(
+        key="map",
+        name="Karte, simulierte Fahrten und Positionen",
+        phase=6,
+        status="available",
+        note="Straßengenaue Fahrten mit OSRM (Container); ohne Routing gekennzeichnete Luftlinie",
+    ),
     ModuleStatus(key="voice", name="Sprach- und Telefoniesimulation", phase=7, status="planned"),
     ModuleStatus(key="ai_caller", name="KI-Anrufsimulation und Ausbildermodus", phase=7, status="planned"),
     ModuleStatus(
@@ -146,6 +158,13 @@ class SystemService:
         setting.value = mode.value
         setting.updated_by = self.uow.actor.user_id
         await self.s.flush()
+        if mode == OperationMode.REAL:
+            # Entering real operation: simulated drives stop – no simulated positions in real mode.
+            from app.simulation.fleet import Fleet
+
+            stopped = await Fleet(self.uow).stop_all("Wechsel in den Echtbetrieb")
+            if stopped:
+                reason = f"{reason} – {stopped} simulierte Fahrt(en) beendet"
         if mode == OperationMode.SIMULATION:
             # Leaving real operation: every real interface is switched off (clear separation).
             from app.services.interface_service import disable_real_interfaces

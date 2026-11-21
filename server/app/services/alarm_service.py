@@ -491,6 +491,8 @@ class AlarmService:
             assignment = assignments.get(vehicle.id)
             if assignment is not None and assignment.alarmed_at is None:
                 assignment.alarmed_at = now
+        if mode == OperationMode.SIMULATION:
+            await self._simulate_turnout(incident, [v for v, *_ in comp.vehicles], assignments)
 
         alarm = Alarm(
             id=uuid.uuid4(),
@@ -630,6 +632,23 @@ class AlarmService:
             ) from exc
         await self.s.refresh(alarm)
         return alarm, False
+
+    async def _simulate_turnout(
+        self, incident: Incident, vehicles: list[Vehicle], assignments: dict[uuid.UUID, IncidentVehicle]
+    ) -> None:
+        """Simulation: the alarmed crews turn out after the turnout time and drive to the scene."""
+        from app.simulation.fleet import TURNOUT_ON_RADIO_S, Fleet
+
+        settings = await ProposalService(self.uow, self.visible).settings_for(incident.control_center_id)
+        fleet = Fleet(self.uow, self.routing)
+        for vehicle in vehicles:
+            assignment = assignments.get(vehicle.id)
+            if assignment is None or assignment.s3_at is not None:  # already on the way / on scene
+                continue
+            turnout = settings.turnout_seconds_on_station if vehicle.status_code == 2 else TURNOUT_ON_RADIO_S
+            await fleet.schedule_trip(vehicle, incident, float(turnout))
+        for note in fleet.notes:
+            self.incidents.event(incident, "simulation", note, None)
 
     @staticmethod
     def _target(
