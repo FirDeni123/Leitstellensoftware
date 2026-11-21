@@ -9,7 +9,8 @@ export type WorkstationKey = 'call_taking' | 'dispatch' | 'radio' | 'management'
 
 /** Default layout description: columns of tab groups (first panel of a group is active). */
 export interface DefaultLayout {
-  columns: { groups: string[][] }[];
+  /** `width` (px) applies to columns after the first; the first column takes the rest. */
+  columns: { groups: string[][]; width?: number }[];
 }
 
 export interface Workstation {
@@ -24,16 +25,15 @@ export const WORKSTATIONS: readonly Workstation[] = [
   {
     key: 'call_taking', title: 'Einsatzannahme', shortcut: 'F2', permission: 'calls.handle',
     layout: { columns: [
-      { groups: [['emergency-calls', 'active-calls'], ['incidents']] },
-      { groups: [['map'], ['system-messages', 'module-status']] },
+      { groups: [['emergency-calls']] },
+      { groups: [['incidents'], ['active-calls', 'map', 'system-messages', 'module-status']], width: 620 },
     ] },
   },
   {
     key: 'dispatch', title: 'Disposition', shortcut: 'F3', permission: 'incidents.write',
     layout: { columns: [
-      { groups: [['incidents'], ['alarms', 'audit-log']] },
-      { groups: [['map'], ['vehicles', 'status-board']] },
-      { groups: [['talk-requests'], ['system-messages', 'module-status']] },
+      { groups: [['incidents']] },
+      { groups: [['map', 'vehicles', 'status-board'], ['emergency-calls', 'active-calls', 'talk-requests', 'alarms', 'system-messages', 'audit-log']], width: 560 },
     ] },
   },
   {
@@ -47,14 +47,14 @@ export const WORKSTATIONS: readonly Workstation[] = [
     key: 'management', title: 'Verwaltung', shortcut: 'F5', permission: 'control_centers.read',
     layout: { columns: [
       { groups: [['vehicle-admin', 'stations', 'rics', 'alarm-groups', 'radio-groups'], ['import']] },
-      { groups: [['control-centers', 'areas', 'organizations', 'vehicle-types', 'status-definitions'], ['audit-log', 'module-status', 'system-messages']] },
+      { groups: [['control-centers', 'areas', 'keywords', 'organizations', 'vehicle-types', 'status-definitions'], ['audit-log', 'module-status', 'system-messages']] },
     ] },
   },
   {
     key: 'admin', title: 'Administrator', shortcut: 'F6', permission: 'system.admin',
     layout: { columns: [
       { groups: [['users', 'roles', 'login-log']] },
-      { groups: [['control-centers', 'areas', 'organizations', 'vehicle-types', 'status-definitions', 'import']] },
+      { groups: [['control-centers', 'areas', 'keywords', 'organizations', 'vehicle-types', 'status-definitions', 'import']] },
       { groups: [['audit-log'], ['module-status', 'system-messages']] },
     ] },
   },
@@ -71,7 +71,7 @@ export function permittedLayout(ws: Workstation, permissions: readonly string[])
     return !!def && canOpenPanel(def, permissions);
   };
   const columns = ws.layout.columns
-    .map((c) => ({ groups: c.groups.map((g) => g.filter(allowed)).filter((g) => g.length > 0) }))
+    .map((c) => ({ ...c, groups: c.groups.map((g) => g.filter(allowed)).filter((g) => g.length > 0) }))
     .filter((c) => c.groups.length > 0);
   return { columns: columns.length ? columns : [{ groups: [['system-messages']] }] };
 }

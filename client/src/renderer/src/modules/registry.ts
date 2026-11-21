@@ -37,21 +37,12 @@ export const PANELS: readonly PanelDefinition[] = [
   { id: 'import', title: 'Datenimport', permission: 'data.import', phase: 2, implemented: true },
   { id: 'roles', title: 'Rollen & Rechte', permission: 'users.read', phase: 2, implemented: true },
   { id: 'login-log', title: 'Anmeldeprotokoll', permission: 'login_log.read', phase: 2, implemented: true },
+  { id: 'keywords', title: 'Einsatzstichworte', permission: 'master_data.read', phase: 3, implemented: true },
+  // ---- implemented in phase 3 (operations) -----------------------------------------------
+  { id: 'emergency-calls', title: 'Neue Notrufe', permission: 'calls.handle', phase: 3, implemented: true },
+  { id: 'active-calls', title: 'Laufende Telefonate', permission: 'calls.handle', phase: 3, implemented: true },
+  { id: 'incidents', title: 'Aktuelle Einsätze', permission: 'incidents.read', phase: 3, implemented: true },
   // ---- planned modules (transparently marked) -------------------------------------------
-  {
-    id: 'incidents', title: 'Aktuelle Einsätze', permission: 'incidents.read', phase: 3, implemented: false,
-    scope: ['Einsatzliste mit Status, Stichwort, Ort, Priorität', 'Einsatzdetail mit Verlauf und Dokumentation',
-      'Fahrzeuge zuordnen, abziehen, umsetzen'],
-  },
-  {
-    id: 'emergency-calls', title: 'Neue Notrufe', permission: 'calls.handle', phase: 3, implemented: false,
-    scope: ['Anrufannahme und Priorisierung', 'Anruferdaten, Standort, Gesprächsnotizen',
-      'Zuordnung zu bestehendem Einsatz oder neuer Einsatz'],
-  },
-  {
-    id: 'active-calls', title: 'Laufende Telefonate', permission: 'calls.handle', phase: 7, implemented: false,
-    scope: ['Simulierte Telefonie (Phase 3)', 'Sprachsimulation und VoIP-Anbindung (Phase 7)'],
-  },
   {
     id: 'talk-requests', title: 'Sprechwünsche', permission: 'radio.handle', phase: 6, implemented: false,
     scope: ['Sprechwünsche nach Priorität', 'Annehmen, zurückstellen, ablehnen', 'Dokumentation mit Zeitstempel'],

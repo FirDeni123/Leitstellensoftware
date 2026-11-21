@@ -1,9 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useState, type ReactNode } from 'react';
-import { ApiError } from '@/api/http';
+import { useState, type ReactNode } from 'react';
 import { useControlCenters, usePermissions, useRoles, useUsers } from '@/api/queries';
 import type { Permission, PermissionOverride, User, UserCreatedResponse } from '@/api/types';
 import { EmptyState, ErrorAlert, Field, fmtDateTime, Modal } from '@/components/common';
+import { EditNotices, useEditBase } from '@/components/useEditBase';
 import { hasPermission, useSession } from '@/state/session';
 import { sysmsg } from '@/state/messages';
 
@@ -47,7 +47,7 @@ export function UsersPanel(): ReactNode {
           </table>
         </div>
         <div className="detail">
-          {selected ? <UserEditor key={`${selected.id}:${selected.version}`} user={selected} canWrite={canWrite} /> : <EmptyState title="Benutzer auswählen" />}
+          {selected ? <UserEditor key={selected.id} user={selected} canWrite={canWrite} /> : <EmptyState title="Benutzer auswählen" />}
         </div>
       </div>
       {creating && <CreateUserDialog onClose={() => setCreating(false)} onCreated={(id) => setSelectedId(id)} />}
@@ -62,6 +62,22 @@ function UserStatus({ user }: { user: User }): ReactNode {
   return <span className="badge ok">Aktiv</span>;
 }
 
+interface UserForm {
+  displayName: string;
+  email: string;
+  roles: string[];
+  ccIds: string[];
+  overrides: PermissionOverride[];
+}
+
+const toUserForm = (u: User | undefined): UserForm => ({
+  displayName: u?.display_name ?? '',
+  email: u?.email ?? '',
+  roles: [...(u?.roles ?? [])].sort(),
+  ccIds: (u?.control_centers ?? []).map((c) => c.id).sort(),
+  overrides: u?.permission_overrides ?? [],
+});
+
 function UserEditor({ user, canWrite }: { user: User; canWrite: boolean }): ReactNode {
   const api = useSession((s) => s.api)!;
   const me = useSession((s) => s.me)!;
@@ -69,22 +85,18 @@ function UserEditor({ user, canWrite }: { user: User; canWrite: boolean }): Reac
   const roles = useRoles();
   const ccs = useControlCenters();
   const canRoles = hasPermission(me, 'roles.write');
-  const [displayName, setDisplayName] = useState(user.display_name);
-  const [email, setEmail] = useState(user.email ?? '');
-  const [userRoles, setUserRoles] = useState(user.roles);
-  const [ccIds, setCcIds] = useState(user.control_centers.map((c) => c.id));
-  const [overrides, setOverrides] = useState<PermissionOverride[]>(user.permission_overrides);
+  // Editing protection against concurrent changes (see useEditBase).
+  const edit = useEditBase(user, toUserForm, (u) => u.version);
+  const { form, dirty } = edit;
+  const set = <K extends keyof UserForm>(key: K) => (value: UserForm[K]) =>
+    edit.setForm((f) => ({ ...f, [key]: Array.isArray(value) && key !== 'overrides' ? [...value].sort() : value }));
+  const { displayName, email, roles: userRoles, ccIds, overrides } = form;
+  const [setDisplayName, setEmail, setUserRoles, setCcIds, setOverrides] =
+    [set('displayName'), set('email'), set('roles'), set('ccIds'), set('overrides')] as const;
   const catalogue = usePermissions();
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const [password, setPassword] = useState<string | null>(null);
-
-  useEffect(() => setError(null), [user.version]);
-
-  const dirty = displayName !== user.display_name || email !== (user.email ?? '') ||
-    [...userRoles].sort().join() !== [...user.roles].sort().join() ||
-    [...ccIds].sort().join() !== user.control_centers.map((c) => c.id).sort().join() ||
-    JSON.stringify(overrides) !== JSON.stringify(user.permission_overrides);
 
   const run = async (fn: () => Promise<unknown>, success: string) => {
     setBusy(true);
@@ -100,13 +112,16 @@ function UserEditor({ user, canWrite }: { user: User; canWrite: boolean }): Reac
     }
   };
 
-  const save = () => run(() => api.patch(`/users/${user.id}`, {
-    expected_version: user.version,
+  const save = () => run(async () => {
+    const saved = await api.patch<User>(`/users/${user.id}`, {
+    expected_version: edit.baseVersion,
     display_name: displayName,
     email: email || null,
     control_center_ids: ccIds,
     ...(canRoles ? { roles: userRoles, permission_overrides: overrides } : {}),
-  }), `Benutzer ${user.username} gespeichert`);
+    });
+    edit.rebase(saved);
+  }, `Benutzer ${user.username} gespeichert`);
 
   const locked = !!user.locked_until && new Date(user.locked_until) > new Date();
   const isSelf = user.id === me.id;
@@ -120,14 +135,6 @@ function UserEditor({ user, canWrite }: { user: User; canWrite: boolean }): Reac
       </div>
       <div className="muted mono" style={{ fontSize: 'var(--fs-sm)' }}>{user.username}</div>
 
-      {error instanceof ApiError && error.isConflict ? (
-        <div className="alert error" style={{ marginTop: 10 }}>
-          {error.message}{' '}
-          <button className="btn sm" onClick={() => void qc.invalidateQueries({ queryKey: ['users'] })}>Neu laden</button>
-        </div>
-      ) : (
-        <div style={{ marginTop: 10 }}><ErrorAlert error={error} /></div>
-      )}
 
       <div className="section-title">Stammdaten</div>
       <div className="form-grid">
@@ -153,10 +160,11 @@ function UserEditor({ user, canWrite }: { user: User; canWrite: boolean }): Reac
       <div className="section-title">Individuelle Rechte {!canRoles && <span className="muted">(Änderung erfordert roles.write)</span>}</div>
       <OverridesEditor value={overrides} onChange={setOverrides} disabled={!canWrite || !canRoles} catalogue={catalogue.data ?? []} />
 
+      <EditNotices stale={edit.stale} error={error} onReload={() => { edit.reload(); setError(null); }} />
       {canWrite && (
         <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
           <button className="btn primary" disabled={!dirty || busy} onClick={() => void save()}>Speichern</button>
-          <button className="btn" disabled={!dirty || busy} onClick={() => { setDisplayName(user.display_name); setEmail(user.email ?? ''); setUserRoles(user.roles); setCcIds(user.control_centers.map((c) => c.id)); setOverrides(user.permission_overrides); }}>Verwerfen</button>
+          <button className="btn" disabled={!dirty || busy} onClick={() => edit.reload()}>Verwerfen</button>
         </div>
       )}
 

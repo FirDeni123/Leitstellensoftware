@@ -18,7 +18,8 @@ Freigabe.
 | Kern | Im Simulationsmodus leitet der Kern Aufrufe realer Plugins auf das Simulations-Gateway um, unabhängig vom Plugin-Code | Phase 4 |
 | KI-Training | Der KI-Anrufer ist fest an den Provider `SimulatedTelephony` gebunden. Der Trainingspfad hat keine Code-Verbindung zum SIP-Provider. Ein Test stellt das sicher (Import-Grenze) | Phase 7 |
 | Polizei | Polizei ist eine Organisation mit `alarmable = false`, abgesichert durch einen Datenbank-Check-Constraint (✅). Polizeifahrzeuge können nicht angelegt oder importiert werden (✅). Es gibt keinen Alarmierungspfad, nur ein bestätigungspflichtiges Hinweisfenster (Phase 4) | ✅ / Phase 4 |
-| Daten | Spalten `mode`/`source` kennzeichnen simulierte Datensätze | ab Phase 3 |
+| Daten | Spalten `source` kennzeichnen simulierte Notrufe und Einsätze („SIM“ in der Oberfläche) | ✅ |
+| Simulierte Anrufe | Erzeugung nur mit `simulation.control` und nur im Simulationsbetrieb (im Echtbetrieb 409) | ✅ |
 
 ## 3. Authentifizierung und Sitzungen (umgesetzt)
 

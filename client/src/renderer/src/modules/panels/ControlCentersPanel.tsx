@@ -1,9 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
-import { ApiError } from '@/api/http';
 import { useControlCenters, useList } from '@/api/queries';
 import type { ControlCenter, ControlCenterLink } from '@/api/types';
 import { EmptyState, ErrorAlert, Field, fmtDateTime } from '@/components/common';
+import { EditNotices, useEditBase } from '@/components/useEditBase';
 import { sysmsg } from '@/state/messages';
 import { hasPermission, useSession } from '@/state/session';
 
@@ -67,7 +67,7 @@ export function ControlCentersPanel(): ReactNode {
           {selectedId === 'new' ? (
             <ControlCenterEditor key="new" canWrite={canWrite} onSaved={setSelectedId} />
           ) : selected ? (
-            <ControlCenterEditor key={`${selected.id}:${selected.version}`} cc={selected} canWrite={canWrite} onSaved={setSelectedId} />
+            <ControlCenterEditor key={selected.id} cc={selected} canWrite={canWrite} onSaved={setSelectedId} />
           ) : (
             <EmptyState title="Leitstelle auswählen" />
           )}
@@ -144,7 +144,9 @@ function ControlCenterEditor(props: { cc?: ControlCenter; canWrite: boolean; onS
   const api = useSession((s) => s.api)!;
   const me = useSession((s) => s.me)!;
   const qc = useQueryClient();
-  const [draft, setDraft] = useState<Draft>(cc ? toDraft(cc) : EMPTY);
+  const edit = useEditBase(cc, (c) => (c ? toDraft(c) : EMPTY), (c) => c.version);
+  const draft = edit.form;
+  const setDraft = edit.setForm;
   const [error, setError] = useState<unknown>(null);
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
   const lat = parseCoord(draft.latitude);
@@ -159,8 +161,9 @@ function ControlCenterEditor(props: { cc?: ControlCenter; canWrite: boolean; onS
     };
     try {
       const saved = cc
-        ? await api.patch<ControlCenter>(`/control-centers/${cc.id}`, { ...body, expected_version: cc.version })
+        ? await api.patch<ControlCenter>(`/control-centers/${cc.id}`, { ...body, expected_version: edit.baseVersion })
         : await api.post<ControlCenter>('/control-centers', { ...body, code: draft.code });
+      if (cc) edit.rebase(saved);
       await qc.invalidateQueries({ queryKey: ['control-centers'] });
       sysmsg('success', 'Leitstellen', `Leitstelle ${saved.code} gespeichert`);
       props.onSaved(saved.id);
@@ -184,11 +187,7 @@ function ControlCenterEditor(props: { cc?: ControlCenter; canWrite: boolean; onS
   return (
     <div>
       <div style={{ fontSize: 'var(--fs-lg)', fontWeight: 600 }}>{cc ? cc.name : 'Neue Leitstelle'}</div>
-      {error instanceof ApiError && error.isConflict && cc ? (
-        <div className="alert error" style={{ marginTop: 10 }}>{error.message} <button className="btn sm" onClick={() => void qc.invalidateQueries({ queryKey: ['control-centers'] })}>Neu laden</button></div>
-      ) : (
-        <div style={{ marginTop: 10 }}><ErrorAlert error={error} /></div>
-      )}
+      <EditNotices stale={edit.stale} error={error} onReload={() => { edit.reload(); setError(null); }} />
       <div className="form-grid" style={{ marginTop: 10 }}>
         <Field label="Kennung"><input className="input mono" value={draft.code} disabled={!!cc || !canWrite} onChange={(e) => set({ code: e.target.value.toUpperCase() })} placeholder="ILS-NORD" /></Field>
         <Field label="Name"><input className="input" value={draft.name} disabled={!canWrite} onChange={(e) => set({ name: e.target.value })} /></Field>

@@ -63,7 +63,18 @@ kopiert, sondern aus der Wache abgeleitet (`position_source = station`).
 | `radio_groups` | Funkrufgruppen. `control_center_id`, `name`, `talkgroup` (Kennung), `kind` + Zuordnung zu Wachen, Organisationen, Fahrzeugen (`radio_group_assignments`) |
 | `import_jobs` | Excel/CSV-Importe. `kind` (`vehicles`/`stations`), `file_name`, `column_mapping` (JSONB), `preview` (JSONB), `status` (`uploaded` → `mapped` → `validated` → `confirmed`/`discarded`), `errors` (JSONB), `created_by` |
 
-### Phase 3 – Notrufannahme und Einsätze
+### Phase 3 – Notrufannahme und Einsätze (✅ umgesetzt, Migration `0003`)
+
+Umgesetzt mit folgenden Präzisierungen: `keywords` (Stichwortkatalog: Kürzel, Bezeichnung,
+Einsatzart, Standardpriorität) wurde aus Phase 4 vorgezogen; Phase 4 ergänzt Alarmierungsregeln
+und Polizei-Hinweis. `incident_stations` entfällt – beteiligte Wachen ergeben sich aus den
+zugeordneten Fahrzeugen (Phase 4 ergänzt ggf. wachenbezogene Alarmierungen). Einsatznummern
+`JJJJ-NNNNNN` sind je Leitstelle und Jahr lückenlos (`incident_number_sequences`, Zeile wird
+in der Transaktion gesperrt). `incident_events` ist per Trigger unveränderbar. Ein
+partieller eindeutiger Index auf `incident_vehicles(vehicle_id) WHERE released_at IS NULL`
+garantiert, dass ein Fahrzeug höchstens einem Einsatz zugeordnet ist. Notrufe speichern bei
+Simulation das simulierte Gesprächsprotokoll (`sim_transcript`).
+
 
 | Tabelle | Zweck / Spalten |
 |---|---|

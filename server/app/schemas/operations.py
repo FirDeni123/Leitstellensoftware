@@ -111,7 +111,11 @@ class CallCreate(ApiModel):
     reason: str | None = Field(default=None, max_length=4000)
 
 
-class CallUpdate(VersionedUpdate):
+class CallUpdate(ApiModel):
+    """Calls are edited only by the dispatcher handling them (enforced by the service), so the
+    version is optional – a stale version from one's own note must not block fast typing."""
+
+    expected_version: int | None = Field(default=None, ge=1)
     priority: int | None = Field(default=None, ge=1, le=3)
     caller_name: str | None = Field(default=None, max_length=200)
     caller_phone: str | None = Field(default=None, max_length=64)

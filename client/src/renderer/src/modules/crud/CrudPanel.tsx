@@ -3,10 +3,10 @@
  * optimistic locking and conflict handling. Each entity only supplies an EntityConfig.
  */
 import { useQueryClient } from '@tanstack/react-query';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ApiError } from '@/api/http';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useList } from '@/api/queries';
 import { EmptyState, ErrorAlert } from '@/components/common';
+import { EditNotices, useEditBase } from '@/components/useEditBase';
 import { sysmsg } from '@/state/messages';
 import { hasPermission, useSession } from '@/state/session';
 import { useActiveControlCenter } from '@/state/workContext';
@@ -96,28 +96,13 @@ function CrudEditor<T extends object>(props: { config: EntityConfig<T>; item?: T
   const qc = useQueryClient();
   const { active } = useActiveControlCenter();
   const toForm = (record: T | undefined) => Object.fromEntries(config.fields.map((f) => [f.key, initialValue(f, record)])) as FormValues;
-  // `base` is the version the user started editing. Newer versions arriving via realtime
-  // replace the form only when it has no unsaved input – otherwise the user is warned and
-  // a save is rejected by the server (409) instead of silently overwriting either side.
-  const [base, setBase] = useState<T | undefined>(item);
-  const initial = useMemo(() => toForm(base), [base]); // eslint-disable-line react-hooks/exhaustive-deps
-  const [form, setForm] = useState<FormValues>(initial);
+  const edit = useEditBase(item, toForm, versionOf);
+  const { form, setForm, initial, dirty, stale } = edit;
   const [error, setError] = useState<unknown>(null);
   const [busy, setBusy] = useState(false);
   const idOf = config.idOf ?? defaultId;
-  const dirty = JSON.stringify(form) !== JSON.stringify(initial);
-  const stale = !!item && !!base && versionOf(item) !== versionOf(base);
-
-  useEffect(() => {
-    if (item && base && versionOf(item) !== versionOf(base) && !dirty) {
-      setBase(item);
-      setForm(toForm(item));
-    }
-  }, [item]); // eslint-disable-line react-hooks/exhaustive-deps
-
   const reload = () => {
-    setBase(item);
-    setForm(toForm(item));
+    edit.reload();
     setError(null);
   };
 
@@ -138,12 +123,9 @@ function CrudEditor<T extends object>(props: { config: EntityConfig<T>; item?: T
     setBusy(true);
     try {
       const saved = item
-        ? await api.patch<T>(`${config.path}/${idOf(item)}`, { ...payload, expected_version: versionOf(base ?? item) })
+        ? await api.patch<T>(`${config.path}/${idOf(item)}`, { ...payload, expected_version: edit.baseVersion })
         : await api.post<T>(config.path, { ...payload, ...(config.scoped ? { control_center_id: active?.id } : {}) });
-      if (item) {
-        setBase(saved); // own change: the server response is the new editing base
-        setForm(toForm(saved));
-      }
+      if (item) edit.rebase(saved); // own change: the server response is the new editing base
       await qc.invalidateQueries({ queryKey: [config.collection] });
       sysmsg('success', config.plural, `${config.singular} „${config.title(saved)}“ gespeichert`);
       props.onDone(idOf(saved));
@@ -187,19 +169,7 @@ function CrudEditor<T extends object>(props: { config: EntityConfig<T>; item?: T
           );
         })}
       </div>
-      {stale && !(error instanceof ApiError && error.isConflict) && (
-        <div className="alert warning" style={{ marginTop: 12 }}>
-          Dieser Datensatz wurde zwischenzeitlich von einer anderen Person geändert. Ihre Eingaben sind noch nicht gespeichert.{' '}
-          <button className="btn sm" onClick={reload}>Neu laden (Eingaben verwerfen)</button>
-        </div>
-      )}
-      {error instanceof ApiError && error.isConflict && item ? (
-        <div className="alert error" style={{ marginTop: 12 }}>
-          {error.message} <button className="btn sm" onClick={reload}>Neu laden</button>
-        </div>
-      ) : (
-        <div style={{ marginTop: 12 }}><ErrorAlert error={error} /></div>
-      )}
+      <EditNotices stale={stale} error={error} onReload={reload} />
       {canWrite && (
         <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
           <button className="btn primary" disabled={busy || (!!item && !dirty)} onClick={() => void save()}>{item ? 'Speichern' : 'Anlegen'}</button>

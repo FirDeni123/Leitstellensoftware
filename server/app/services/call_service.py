@@ -136,6 +136,7 @@ class CallService:
                     details={"handled_by": str(call.handled_by)},
                 )
             raise ConflictError("Notruf klingelt nicht mehr")
+        await self._hold_my_other_calls(call)
         call.status = "active"
         call.handled_by = self.uow.actor.user_id
         call.answered_at = datetime.now(UTC)
@@ -145,6 +146,30 @@ class CallService:
         self._emit(call, "answered")
         await self.uow.commit()
         return call
+
+    async def _hold_my_other_calls(self, current: EmergencyCall) -> None:
+        """Like a desk phone: taking a new call puts the dispatcher's active call on hold."""
+        others = (
+            await self.s.scalars(
+                select(EmergencyCall)
+                .where(
+                    EmergencyCall.handled_by == self.uow.actor.user_id,
+                    EmergencyCall.status == "active",
+                    EmergencyCall.id != current.id,
+                )
+                .with_for_update()
+            )
+        ).all()
+        for other in others:
+            other.status = "on_hold"
+            self.uow.audit(
+                "hold",
+                "emergency_call",
+                other.id,
+                "Gespräch automatisch gehalten (neuer Notruf angenommen)",
+                control_center_id=other.control_center_id,
+            )
+            self._emit(other, "on_hold")
 
     async def hold(self, call_id: uuid.UUID, expected_version: int | None = None) -> EmergencyCall:
         call = await self.get(call_id, lock=True)
@@ -162,6 +187,7 @@ class CallService:
         if call.status != "on_hold":
             raise ConflictError("Der Notruf wird nicht gehalten")
         takeover = call.handled_by != self.uow.actor.user_id
+        await self._hold_my_other_calls(call)
         call.status = "active"
         call.handled_by = self.uow.actor.user_id
         if takeover:
@@ -196,9 +222,12 @@ class CallService:
             raise ConflictError("Dieser Notruf wird von einer anderen Person bearbeitet")
 
     # ----------------------------------------------------------------------------- content
-    async def update(self, call_id: uuid.UUID, data: dict[str, Any], expected_version: int) -> EmergencyCall:
-        call = await self.get(call_id)
-        check_version(call, expected_version, "Der Notruf")
+    async def update(
+        self, call_id: uuid.UUID, data: dict[str, Any], expected_version: int | None = None
+    ) -> EmergencyCall:
+        call = await self.get(call_id, lock=True)
+        if expected_version is not None:
+            check_version(call, expected_version, "Der Notruf")
         if call.status == "ended":
             raise ConflictError("Beendete Notrufe sind abgeschlossen – Ergänzungen im Einsatz dokumentieren")
         if call.status in ("active", "on_hold"):

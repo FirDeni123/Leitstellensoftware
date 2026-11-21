@@ -15,7 +15,7 @@ import { useSession } from '@/state/session';
 import { permittedLayout, type DefaultLayout, type Workstation } from './workstations';
 
 // Bumped when default layouts change substantially (stored layouts are replaced once).
-const LAYOUT_SCHEMA = 2;
+const LAYOUT_SCHEMA = 4;
 const SAVE_DEBOUNCE_MS = 1500;
 
 interface LayoutActions {
@@ -52,7 +52,8 @@ export function applyDefaultLayout(api: DockviewApi, layout: DefaultLayout): voi
               : api.panels.length > 0
                 ? { direction: 'right' as const }
                 : undefined;
-        api.addPanel({ id: panelId, component: panelId, title: def.title, position });
+        const width = index === 0 && groupIndex === 0 && api.panels.length > 0 ? column.width : undefined;
+        api.addPanel({ id: panelId, component: panelId, title: def.title, position, ...(width ? { initialWidth: width } : {}) });
       });
       api.getPanel(lead)?.api.setActive();
       previousGroupLead = lead;

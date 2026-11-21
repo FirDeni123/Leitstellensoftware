@@ -1,5 +1,31 @@
 # Änderungsprotokoll
 
+## 0.3.0 – 21.11.2026 – Phase 3: Einsatzbearbeitung
+
+### Hinzugefügt
+- Notrufannahme: Warteschlange nach Priorität und Wartezeit, Signalton (abschaltbar) und
+  Notrufanzeige in der Kopfzeile, Annahme per Strg+Leertaste, Halten/Übernehmen, Beenden,
+  Anruferdaten, Anruferstandort übernehmen, Zuständigkeitsprüfung, W-Fragen als dokumentierte
+  Rückfragen, Gesprächsnotizen, Anruf manuell erfassen, laufende Telefonate.
+- Einsätze: aus Notruf oder manuell, lückenlose Nummern je Leitstelle und Jahr, Stichwort,
+  Einsatzart, Priorität, Statusmodell (Neu … Abgeschlossen) mit Abschlussregeln, Fahrzeuge
+  zuordnen/freigeben/umsetzen (ein Fahrzeug nur in einem Einsatz), beteiligte Wachen,
+  zugeordnete Notrufe, unveränderbarer Einsatzverlauf, Dokumentation.
+- Stichwortkatalog mit 16 Standardstichworten (administrierbar).
+- Simulierte Telefonie: zehn fiktive Notfallszenarien, Gesprächsprotokoll „auf Nachfrage“,
+  nur im Simulationsbetrieb.
+
+### Geändert
+- Bearbeitungsschutz bei gleichzeitigen Änderungen jetzt einheitlich (auch Benutzer- und
+  Leitstellenverwaltung).
+- Standardlayouts (Schema 4) für Einsatzannahme und Disposition mit breiterer Einsatzliste.
+
+### Behoben (während der Entwicklung gefunden)
+- Eingaben konnten im Formular eines vorherigen Gesprächs landen; ein neues Gespräch hält jetzt
+  automatisch das bisherige, und die Ansicht wechselt sofort.
+- Eigene Notizen blockierten das Speichern des Notrufs (Versionskonflikt) – Notrufe nutzen
+  stattdessen die Bearbeiter-Sperre.
+
 ## 0.2.0 – 21.11.2026 – Phase 2: Administration
 
 ### Hinzugefügt

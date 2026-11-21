@@ -4,6 +4,7 @@ import { useSystemInfo } from '@/api/queries';
 import { ChangePasswordForm } from '@/auth/ChangePasswordForm';
 import { Modal } from '@/components/common';
 import { DockArea } from '@/layout/DockArea';
+import { installCallAlert } from '@/modules/operations/callAlert';
 import { availableWorkstations } from '@/layout/workstations';
 import { sysmsg } from '@/state/messages';
 import { onRealtimeEvent, useSession } from '@/state/session';
@@ -26,6 +27,8 @@ export function Shell(): ReactNode {
     if (info.data) setSystemInfo(info.data);
     if (info.error) sysmsg('error', 'System', describeError(info.error));
   }, [info.data, info.error, setSystemInfo]);
+
+  useEffect(() => installCallAlert(), []);
 
   useEffect(
     () =>

@@ -5,7 +5,10 @@
 import { QueryClient, useQuery } from '@tanstack/react-query';
 import { onRealtimeEvent, onResync, useSession } from '@/state/session';
 import { ApiClient, ApiError } from './http';
-import type { AuditPage, ControlCenter, LoginEvent, Page, Permission, Role, SystemInfo, User } from './types';
+import type {
+  ActiveAssignment, AuditPage, Call, ControlCenter, Incident, IncidentEvent, IncidentSummary, LoginEvent, Page, Permission,
+  Role, SystemInfo, User,
+} from './types';
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,6 +29,8 @@ export const TOPIC_INVALIDATIONS: Record<string, readonly (readonly string[])[]>
   'control_center.changed': [['control-centers']],
   'audit.created': [['audit'], ['import-jobs']],
   'system.mode_changed': [['system-info']],
+  'incident.changed': [['incidents'], ['incident-events'], ['active-assignments']],
+  'call.changed': [['calls'], ['incidents']],
 };
 
 export function keysForTopic(topic: string): readonly (readonly string[])[] {
@@ -62,6 +67,45 @@ export function useList<T>(collection: string, path: string, params: Record<stri
     queryKey: [collection, params],
     queryFn: () => api.get<T[]>(path, params),
     enabled,
+  });
+}
+
+export function useCalls(controlCenterId: string | undefined, includeEnded = false) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['calls', controlCenterId, includeEnded],
+    queryFn: () => api.get<Call[]>('/calls', { control_center_id: controlCenterId, include_ended: includeEnded || undefined }),
+    enabled: !!controlCenterId,
+    staleTime: 5_000,
+  });
+}
+
+export function useIncidents(controlCenterId: string | undefined, scope: 'open' | 'closed' | 'all', q = '') {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['incidents', 'list', controlCenterId, scope, q],
+    queryFn: () => api.get<IncidentSummary[]>('/incidents', { control_center_id: controlCenterId, scope, q }),
+    enabled: !!controlCenterId,
+    staleTime: 5_000,
+  });
+}
+
+export function useIncident(id: string | null) {
+  const api = useApi();
+  return useQuery({ queryKey: ['incidents', 'detail', id], queryFn: () => api.get<Incident>(`/incidents/${id}`), enabled: !!id });
+}
+
+export function useIncidentEvents(id: string | null) {
+  const api = useApi();
+  return useQuery({ queryKey: ['incident-events', id], queryFn: () => api.get<IncidentEvent[]>(`/incidents/${id}/events`), enabled: !!id });
+}
+
+export function useActiveAssignments(controlCenterId: string | undefined) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['active-assignments', controlCenterId],
+    queryFn: () => api.get<ActiveAssignment[]>('/incidents/active-assignments', { control_center_id: controlCenterId }),
+    enabled: !!controlCenterId,
   });
 }
 

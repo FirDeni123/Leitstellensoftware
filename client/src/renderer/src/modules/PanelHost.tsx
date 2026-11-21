@@ -5,6 +5,9 @@ import { canOpenPanel, type PanelDefinition } from './registry';
 import { useSession } from '@/state/session';
 import { CrudPanel } from './crud/CrudPanel';
 import * as md from './masterdata/configs';
+import { ActiveCallsPanel } from './operations/ActiveCallsPanel';
+import { CallsPanel } from './operations/CallsPanel';
+import { IncidentsPanel } from './operations/IncidentsPanel';
 import { AuditLogPanel } from './panels/AuditLogPanel';
 import { ImportPanel } from './panels/ImportPanel';
 import { LoginLogPanel } from './panels/LoginLogPanel';
@@ -16,6 +19,10 @@ import { SystemMessagesPanel } from './panels/SystemMessagesPanel';
 import { UsersPanel } from './panels/UsersPanel';
 
 const IMPLEMENTED: Record<string, () => ReactNode> = {
+  'emergency-calls': () => <CallsPanel />,
+  'active-calls': () => <ActiveCallsPanel />,
+  incidents: () => <IncidentsPanel />,
+  keywords: () => <CrudPanel config={md.KEYWORDS} />,
   stations: () => <CrudPanel config={md.STATIONS} />,
   'vehicle-admin': () => <CrudPanel config={md.VEHICLES} />,
   rics: () => <CrudPanel config={md.RICS} />,

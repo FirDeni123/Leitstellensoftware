@@ -1,80 +1,82 @@
 # Projektstatus
 
-**Stand:** 21.11.2026 · **Version:** 0.2.0 · **Aktuelle Phase:** 2 abgeschlossen, nächste: Phase 3 (Einsatzbearbeitung)
+**Stand:** 21.11.2026 · **Version:** 0.3.0 · **Aktuelle Phase:** 3 abgeschlossen, nächste: Phase 4 (Alarmierung)
 
-**Testergebnis zuletzt:** Server 74/74 ✅ · Client-Unit 28/28 ✅ · E2E 5/5 ✅ · Ruff ✅ · TypeScript ✅ ·
-`alembic check` ✅ · Electron-Start und Datei-Upload unter Xvfb ✅
+**Testergebnis zuletzt:** Server 89/89 ✅ · Client-Unit 28/28 ✅ · E2E 6/6 ✅ · Ruff ✅ · TypeScript ✅ ·
+`alembic check` ✅
 
-## Phase 2 – Administration (umgesetzt und getestet)
+## Phase 3 – Einsatzbearbeitung (umgesetzt und getestet)
 
 | Bereich | Inhalt | Nachweis |
 |---|---|---|
-| Datenmodell | Migration `0002` (16 Tabellen), up/down getestet, Modell = Migration (`alembic check`) | Migrationstest beim Testlauf |
-| Organisationen, Fahrzeugtypen | Globale Kataloge mit Standardwerten (10 Organisationen, 18 Fahrzeugtypen), editierbar; Polizei per DB-Constraint nie alarmierbar | `test_master_data.py` |
-| Statusbezeichnungen | FMS 0–9 administrierbar (Bezeichnung, Kurztext, Farbe, „gilt als verfügbar“) | dito |
-| Wachen | Organisation, Standort (GPS), Verfügbarkeit (immer/Zeitplan/nicht), RICs, Funkrufgruppen | dito |
-| Fahrzeuge | Funkrufname (eindeutig je Leitstelle), Kennzeichen, Typ, Organisation, Wache, Funkrufgruppe, RICs, Verfügbarkeit, Besatzung, Beschreibung, Simulationsgeschwindigkeit; Position aus der Wache abgeleitet | dito |
-| RICs, Alarmierungsgruppen | RIC + Subadresse A–D, beidseitige Zuordnung zu Wachen/Fahrzeugen, Gruppen aus RICs | dito |
-| Funkrufgruppen | Zuordnung zu Wachen, Organisationen, Fahrzeugen | dito |
-| Leitstellen | Verknüpfungen (Nachbar, Rückfallebene, Kooperation), Zuständigkeitsbereiche (GeoJSON / Gemeindeschlüssel), Abfrage der zuständigen Leitstelle je Koordinate | dito |
-| Datenimport | `.xlsx`/`.csv`, Spaltenerkennung, zeilengenaue Prüfung, Vorschau, Aktualisieren, Übernahme in einer Transaktion, Verwerfen, Datenminimierung | `test_import.py` (M2: 200 Fahrzeuge), E2E |
-| Benutzerverwaltung | Rollen-Editor (Rechte nach Bereichen), individuelle Rechte (gewähren/entziehen), Anmeldeprotokoll | UI, E2E-Rundgang |
-| Mandanten & Echtzeit | Alle Stammdaten je Leitstelle gefiltert; Änderungen live nur an Benutzer der betroffenen Leitstelle | `test_tenant_scoping…`, `test_master_data_events_are_scoped…` |
-| Gleichzeitige Bearbeitung | Ungespeicherte Eingaben bleiben bei fremden Änderungen erhalten, Hinweis, Speichern → Konflikt, „Neu laden“ | E2E `concurrent edit` |
+| Datenmodell | Migration `0003`: `keywords`, `emergency_calls`, `call_notes`, `incidents`, `incident_number_sequences`, `incident_events` (Trigger: unveränderbar), `incident_vehicles` (partieller Unique-Index) | Migration up/down, `alembic check` |
+| Notrufannahme | Warteschlange (Priorität, Wartezeit), Signalton + Kopfzeilenanzeige, Annahme per Strg+Leertaste/Doppelklick, genau eine annehmende Person (Wettlauf → 409 mit Namen), Halten/Übernehmen, automatisches Halten beim Annehmen eines weiteren Gesprächs, Anruferdaten, Anruferstandort, Zuständigkeitsprüfung, W-Fragen als Rückfragen, Notizen, manuell erfasste Anrufe, laufende Telefonate | `test_operations.py`, E2E `phase3.spec.ts` |
+| Einsätze | Anlegen aus Notruf (Datenübernahme) oder manuell, lückenlose Nummern je Leitstelle/Jahr (auch bei 10 parallelen Anlagen), Stichwort/Einsatzart/Priorität, Statusmodell mit Regeln (Abschluss nur aus „beendet“, ohne gebundene Fahrzeuge, mit `incidents.close`; Wiedereröffnen nur nach „beendet“), Optimistic Locking | dito |
+| Fahrzeugzuordnung | Zuordnen, Freigeben, Umsetzen mit Rückfrage; ein Fahrzeug nur in einem Einsatz (Sperre + DB-Index, gleichzeitige Zuordnung → genau einmal erfolgreich); nicht verfügbare/fremde Fahrzeuge abgelehnt | dito |
+| Einsatzverlauf | Jede Änderung mit Zeit und Person, unveränderbar (DB-Trigger), Dokumentationseinträge, Verknüpfung mehrerer Notrufe | dito |
+| Stichworte | Katalog mit 16 Standardstichworten, Verwaltung im generischen Stammdaten-Panel | dito |
+| Simulation | Zehn fiktive Szenarien mit Gesprächsprotokoll „auf Nachfrage“, Erzeugung nur mit `simulation.control` und nur im Simulationsbetrieb | `test_simulated_calls_are_refused_in_real_mode` |
+| Bearbeitungsschutz | Gemeinsamer Hook `useEditBase` für Stammdaten, Benutzer, Leitstellen und Einsätze | E2E `concurrent edit` |
 
-**Meilenstein M2 erreicht:** 200 Fahrzeuge aus `.xlsx` mit abweichenden Spaltennamen,
-zeilengenaue Fehler vor der Bestätigung, jeder Datensatz im Änderungsprotokoll
-(`test_m2_import_200_vehicles_from_xlsx`).
+**Meilenstein M3 erreicht:** Zwei Disponenten arbeiten parallel; der zweite Notruf wird durch
+eine Kollegin dem bestehenden Einsatz zugeordnet; der Einsatzverlauf enthält Anlage, beide
+Notrufe, Fahrzeugzuordnung und Statuswechsel mit den handelnden Personen
+(`test_m3_two_dispatchers_…` und E2E `M3: …`).
 
 ## Bei der Umsetzung gefundene und behobene Fehler
 
-- Eine beschädigte `.xlsx` erzeugte einen Serverfehler (500) statt einer Meldung → abgefangen.
-- Beim Aktualisieren per Import hätte ein in Kleinbuchstaben geschriebener Funkrufname die
-  vorhandene Schreibweise überschrieben → der Abgleichsschlüssel bleibt unverändert.
-- Bei gleichzeitiger Bearbeitung wurde das Formular durch Echtzeit-Updates neu aufgebaut und
-  ungespeicherte Eingaben gingen verloren → Schutz im generischen Editor (siehe oben).
+- **Eingaben im falschen Gespräch:** Hatte ein Disponent noch ein aktives Gespräch und nahm
+  einen neuen Notruf an, zeigte die Maske bis zur Serverantwort das alte Gespräch. Jetzt wechselt
+  die Ansicht sofort, und der Server hält das bisherige Gespräch automatisch (wie am Telefon).
+- **Versionskonflikt durch eigene Notiz:** Eine gerade dokumentierte Rückfrage erhöhte die
+  Version des Notrufs und blockierte das Speichern. Notrufe werden nur von der bearbeitenden
+  Person geändert (serverseitig erzwungen) und brauchen keine Versionsprüfung.
+- **Statusaktionen mit Versionsprüfung:** Annehmen/Halten/Beenden/Zuordnen prüfen jetzt den
+  Zustand statt der Version – sonst unnötige Konflikte im Betrieb.
 
 ## In dieser Umgebung nicht verifizierbar (unverändert)
 
-- Docker-Compose-Gesamtstack und Installationsskript (kein Docker-Daemon), Windows-Installer
-  (CI-Job auf `windows-latest`), native Fensterleiste unter Windows.
+- Docker-Compose-Gesamtstack und Installationsskript, Windows-Installer (CI-Job), native
+  Fensterleiste unter Windows.
 
 ## Bekannte offene Punkte
 
 | Punkt | Geplant in |
 |---|---|
-| Benutzer- und Leitstellen-Panel aus Phase 1 bauen das Formular bei fremden Änderungen noch neu auf (Muster des generischen Editors übernehmen) | Phase 3 |
-| Zuständigkeitsbereiche auf der Karte zeichnen; Gemeindeschlüssel automatisch auflösen | Phase 6 / Phase 3 (Adresssuche) |
-| Schnittstellen je Wache (Feuerwehrsoftware, Zusatzalarmierung) | Phase 4 |
-| RICs ↔ Einsatzstichworte, Alarmierungsketten, Zusatzalarmierung | Phase 4 |
-| Statuswechsel im Betrieb, Statushistorie | Phase 6 |
-| Wachen-Import aus OpenStreetMap (Overpass → gleiche Prüfvorschau) | später (Pipeline vorbereitet: `import_files.ParsedTable`) |
-| IP-basierte Ratenbegrenzung der Anmeldung, Zertifikats-Pinning, Code-Signing, Auto-Update | Phase 8 |
-| Pop-out-Fenster für Mehrmonitorbetrieb | Phase 3 |
+| Status „Alarmiert“, „Anfahrt“, „Am Einsatzort“ automatisch aus Alarmierung/Fahrzeugstatus | Phase 4 / 6 (bis dahin manuell) |
+| Einsatzort per Karte wählen, Adresssuche (Geokodierung) | Phase 6 |
+| Gemeindeschlüssel-Bereiche bei der Zuständigkeitsprüfung auswerten | mit Adresssuche |
+| Klingelnde Notrufe ohne Annahme nach Zeit als „verpasst“ markieren | Phase 7 (mit Telefonie) |
+| Pop-out-Fenster für Mehrmonitorbetrieb | Phase 8 (zurückgestellt; Layouts sind je Arbeitsplatz frei anordenbar) |
+| Rollen-Editor nutzt noch nicht den gemeinsamen Bearbeitungsschutz | Phase 4 |
+| IP-basierte Ratenbegrenzung, Zertifikats-Pinning, Code-Signing, Auto-Update | Phase 8 |
 
-## Nächster konkreter Schritt (Phase 3 – Einsatzbearbeitung)
+## Nächster konkreter Schritt (Phase 4 – Alarmierung)
 
-1. Migration `0003`: `emergency_calls`, `call_notes`, `incidents`, `incident_number_sequences`,
-   `incident_events`, `incident_vehicles`, `incident_stations` (Schema: [02-datenbank.md](02-datenbank.md)).
-2. Einsatznummern lückenlos je Leitstelle und Jahr (Sequenztabelle mit `FOR UPDATE`).
-3. Services: Notruf annehmen/halten/beenden/zuordnen, Einsatz anlegen aus Notruf, Statusmodell
-   der Einsätze (Neu → … → Abgeschlossen) mit erlaubten Übergängen, Fahrzeuge zuordnen,
-   abziehen, umsetzen (mit fachlicher Sperre: ein Fahrzeug nur in einem Einsatz),
-   Einsatzverlauf append-only.
-4. Simulierte Anrufe (Provider `SimulatedTelephony`, ohne Audio) zum Testen der Notrufannahme.
-5. Client: Panels „Neue Notrufe“, „Aktuelle Einsätze“, Einsatzdetail mit Verlauf,
-   Tastaturbedienung für die Notrufannahme; Bearbeitungsschutz aus dem generischen Editor.
-6. Abnahme M3: zwei Disponenten parallel, Notruf → bestehender Einsatz, lückenloser Verlauf.
+1. Migration `0004`: Stichwort-Erweiterung (`police_notice`, `police_notice_text`),
+   `alarm_rules` + `alarm_rule_items` (Fahrzeugtyp × Anzahl, Wache, RIC, Alarmierungsgruppe,
+   Schleife/Stufe, Zusatzalarmierung), `alarms` (mit `idempotency_key`), `alarm_targets`,
+   `police_notices`, `interfaces`, `interface_events`.
+2. Alarmierungsvorschau aus Stichwort + AAO + Zuordnungen (Fahrzeuge, Wachen, RICs), Bestätigung,
+   Nachalarmierung; Alarmierung setzt `incident_vehicles.alarmed_at` und den Einsatzstatus
+   „Alarmiert“.
+3. Polizei-Hinweis als bestätigungspflichtiges Popup bei markierten Stichworten – ohne
+   jegliche Zustellung an die Polizei; Bestätigung im Einsatzverlauf.
+4. Plugin-System (`AlarmGateway`) mit Simulations-Gateway; reale Plugins nur im Echtbetrieb
+   und mit `interfaces.activate_real`; Kern leitet im Simulationsbetrieb um (Test!).
+5. Client: AAO-Editor, RIC-Zuordnung zu Stichworten, Alarmierungsvorschau/-bestätigung im
+   Einsatz, Alarmierungsübersicht, Polizei-Popup, Schnittstellenverwaltung.
+6. Abnahme M4 laut Roadmap.
 
 ## Annahmen und Entscheidungen
 
 - Beispielregion für Demo-Daten: Raum Schwarzenbek (Schleswig-Holstein); alle Wachen,
-  Fahrzeuge und RICs sind fiktiv und als „(Demo)“ gekennzeichnet (`server/app/demo_data.py`).
-- Organisationen und Fahrzeugtypen sind leitstellenübergreifende Kataloge; Wachen, Fahrzeuge,
-  RICs, Gruppen und Bereiche gehören genau einer Leitstelle.
-- Leere Zellen ändern beim Import vorhandene Werte nicht; Fehlerzeilen werden nur auf
-  ausdrücklichen Wunsch übersprungen.
-- Tokens nur im Arbeitsspeicher des Clients; keine Offline-Schreibwarteschlange.
+  Fahrzeuge, RICs, Anrufer, Rufnummern (Block „0000“) und Adressen („Demostadt“) sind fiktiv.
+- Einsatznummern: `JJJJ-NNNNNN`, Jahr nach Ortszeit (`ILS_TIMEZONE`, Standard Europe/Berlin).
+- Disponenten dürfen im Simulationsbetrieb Statuswerte manuell setzen; ab Phase 4/6 werden
+  diese aus Alarmierung und Fahrzeugstatus abgeleitet.
+- Ohne Sprach-KI (Phase 7) enthält ein simulierter Notruf ein Gesprächsprotokoll mit den
+  Antworten des Anrufers „auf Nachfrage“.
 - In der Entwicklungsumgebung ist ein Zugang zu einer externen Alarmierungs-API hinterlegt. Er
   wurde **bewusst nicht angesprochen** (reale Alarmierungsschnittstelle). Anbindung frühestens
   in Phase 4 als Plugin, standardmäßig deaktiviert und nur im Echtbetrieb aktivierbar.

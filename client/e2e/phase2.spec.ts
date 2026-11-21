@@ -62,7 +62,9 @@ test('concurrent edit: unsaved input is kept, the save is rejected as conflict, 
     await p.getByRole('cell', { name: 'Florian Demo 3/42-1', exact: true }).click();
     await expect(p.getByLabel('Besatzung')).toBeVisible();
   }
-  const crew = String(4 + (RUN % 5));
+  // always a different value than the current one (the demo database persists between runs)
+  const currentCrew = Number(await a.getByLabel('Besatzung').inputValue()) || 0;
+  const crew = String((currentCrew % 9) + 1);
   await b.getByLabel('Beschreibung').fill(`Eingabe aus Sitzung B ${RUN}`); // B starts typing …
   await a.getByLabel('Besatzung').fill(crew); // … while A saves another change
   await a.getByRole('button', { name: 'Speichern' }).click();

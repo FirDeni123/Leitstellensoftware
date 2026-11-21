@@ -2,7 +2,8 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useLayoutActions } from '@/layout/DockArea';
 import type { Workstation, WorkstationKey } from '@/layout/workstations';
 import { canOpenPanel, PANELS } from '@/modules/registry';
-import { useSession } from '@/state/session';
+import { useCalls } from '@/api/queries';
+import { hasPermission, useSession } from '@/state/session';
 import { useActiveControlCenter, useWorkContext } from '@/state/workContext';
 import { Clock } from './Clock';
 
@@ -15,6 +16,20 @@ function useOutsideClose(open: boolean, close: () => void) {
     return () => window.removeEventListener('mousedown', onDown);
   }, [open, close]);
   return ref;
+}
+
+/** Red, pulsing counter of ringing emergency calls – visible on every workstation. */
+function RingingIndicator({ onOpen }: { onOpen: () => void }): ReactNode {
+  const me = useSession((s) => s.me)!;
+  const { active } = useActiveControlCenter();
+  const calls = useCalls(hasPermission(me, 'calls.handle') ? active?.id : undefined);
+  const ringing = (calls.data ?? []).filter((c) => c.status === 'ringing').length;
+  if (!ringing) return null;
+  return (
+    <button className="ringing-indicator" onClick={onOpen} title="Zur Einsatzannahme (F2)">
+      {ringing} {ringing === 1 ? 'Notruf' : 'Notrufe'}
+    </button>
+  );
 }
 
 export function TopBar(props: {
@@ -77,6 +92,7 @@ export function TopBar(props: {
           )}
         </div>
 
+        <RingingIndicator onOpen={() => { setWorkstation('call_taking'); }} />
         <Clock />
 
         <div className="menu-anchor">

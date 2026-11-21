@@ -38,10 +38,10 @@ Die Serveradresse wird in der Anmeldemaske unter „Server“ eingestellt.
 ## Tests
 
 ```bash
-cd server && uv run pytest -q                     # 74 Tests, echte PostgreSQL-Testdatenbank ils_test
+cd server && uv run pytest -q                     # 89 Tests, echte PostgreSQL-Testdatenbank ils_test
 cd server && uv run ruff check app tests && uv run ruff format --check app tests
 cd client && npm run typecheck && npm test        # 28 Unit-Tests (vitest)
-cd client && npm run build:web && npm run e2e     # 5 E2E-Tests (Server mit seed-demo muss laufen)
+cd client && npm run build:web && npm run e2e     # 6 E2E-Tests (Server mit seed-demo, Simulationsbetrieb)
 ```
 
 Server-Tests legen das Schema über die Alembic-Migrationen an. Damit werden die Migrationen

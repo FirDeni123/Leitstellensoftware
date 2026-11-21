@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type {
   AlarmGroup,
   ControlCenterArea,
+  Keyword,
   Organization,
   OrganizationKind,
   RadioGroup,
@@ -263,4 +264,28 @@ export const AREAS: EntityConfig<ControlCenterArea> = {
     { key: 'description', label: 'Beschreibung', type: 'textarea' },
   ],
   details: () => <div className="muted" style={{ fontSize: 'var(--fs-xs)' }}>Gebiete auf der Karte zeichnen: ab Phase 6 (Kartenmodul).</div>,
+};
+
+// ------------------------------------------------------------------------------ keywords (phase 3)
+const TYPE_OPTIONS: Option[] = Object.entries({ fire: 'Brand', technical: 'Technische Hilfe', ems: 'Rettungsdienst', hazmat: 'Gefahrstoff', water: 'Wasserrettung', other: 'Sonstiges' })
+  .map(([value, label]) => ({ value, label }));
+
+export const KEYWORDS: EntityConfig<Keyword> = {
+  collection: 'keywords', path: '/keywords', singular: 'Einsatzstichwort', plural: 'Einsatzstichworte', scoped: false,
+  writePermission: 'keywords.write', title: (k) => k.code, inactive: (k) => !k.is_active,
+  columns: [
+    { header: 'Stichwort', width: 100, render: (k) => <span className={`kw kw-${k.category}`}>{k.code}</span> },
+    { header: 'Bezeichnung', render: (k) => k.name },
+    { header: 'Einsatzart', render: (k) => TYPE_OPTIONS.find((o) => o.value === k.category)?.label ?? k.category },
+    { header: 'Prio', width: 50, className: 'tabular', render: (k) => k.default_priority },
+  ],
+  fields: [
+    { key: 'code', label: 'Kürzel', type: 'text', required: true, createOnly: true, placeholder: 'B2', transform: (v) => v.toUpperCase() },
+    { key: 'name', label: 'Bezeichnung', type: 'text', required: true },
+    { key: 'category', label: 'Einsatzart', type: 'select', required: true, options: TYPE_OPTIONS },
+    { key: 'default_priority', label: 'Standardpriorität (1 = höchste)', type: 'number', min: 1, max: 3, defaultValue: '2', required: true },
+    { key: 'is_active', label: 'Aktiv', type: 'checkbox', defaultValue: true },
+    { key: 'description', label: 'Beschreibung', type: 'textarea' },
+  ],
+  details: () => <div className="muted" style={{ fontSize: 'var(--fs-xs)' }}>Alarmierungsregeln (AAO), RIC-Zuordnung und Polizei-Hinweis je Stichwort folgen mit Phase 4.</div>,
 };

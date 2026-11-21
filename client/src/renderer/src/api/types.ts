@@ -337,3 +337,123 @@ export interface ImportJob {
 }
 
 export type ImportJobSummary = Omit<ImportJob, 'headers' | 'sample_rows' | 'sheets' | 'fields' | 'column_mapping' | 'options' | 'validation'>;
+
+// ------------------------------------------------------------------ Phase 3: operations
+export type IncidentStatus = 'new' | 'in_progress' | 'alarmed' | 'en_route' | 'on_scene' | 'finished' | 'closed';
+export type IncidentType = 'fire' | 'technical' | 'ems' | 'hazmat' | 'water' | 'other';
+export type CallStatus = 'ringing' | 'active' | 'on_hold' | 'ended';
+
+export interface KeywordRef {
+  id: Uuid;
+  code: string;
+  name: string;
+  category: IncidentType;
+}
+
+export interface Keyword extends KeywordRef, Versioned {
+  default_priority: number;
+  description: string | null;
+  is_active: boolean;
+}
+
+export interface CallNote {
+  id: number;
+  kind: 'note' | 'question';
+  question: string | null;
+  text: string;
+  author_name: string;
+  ts: string;
+}
+
+export interface Call {
+  id: Uuid;
+  control_center_id: Uuid;
+  status: CallStatus;
+  priority: number;
+  source: 'sim' | 'manual' | 'voip' | 'training';
+  line: string | null;
+  caller_name: string | null;
+  caller_phone: string | null;
+  caller_location: string | null;
+  caller_latitude: number | null;
+  caller_longitude: number | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  reason: string | null;
+  sim_transcript: string | null;
+  incident: { id: Uuid; number: string; status: IncidentStatus } | null;
+  handled_by: Uuid | null;
+  handled_by_name: string | null;
+  received_at: string;
+  answered_at: string | null;
+  ended_at: string | null;
+  notes: CallNote[];
+  version: number;
+}
+
+export interface IncidentSummary {
+  id: Uuid;
+  control_center_id: Uuid;
+  number: string;
+  keyword: KeywordRef | null;
+  incident_type: IncidentType;
+  status: IncidentStatus;
+  priority: number;
+  address: string | null;
+  created_at: string;
+  status_changed_at: string;
+  vehicles: string[];
+  version: number;
+}
+
+export interface Assignment {
+  id: number;
+  vehicle: { id: Uuid; call_sign: string; vehicle_type: string; station: string };
+  assigned_at: string;
+  alarmed_at: string | null;
+  s3_at: string | null;
+  s4_at: string | null;
+  released_at: string | null;
+  released_reason: string | null;
+}
+
+export interface Incident extends IncidentSummary {
+  year: number;
+  sequence: number;
+  location_note: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  caller_name: string | null;
+  caller_phone: string | null;
+  description: string | null;
+  source: string;
+  updated_at: string;
+  finished_at: string | null;
+  closed_at: string | null;
+  assignments: Assignment[];
+  stations: StationRef[];
+  calls: { id: Uuid; status: CallStatus; caller_name: string | null; caller_phone: string | null; received_at: string }[];
+}
+
+export interface IncidentEvent {
+  id: number;
+  ts: string;
+  kind: string;
+  text: string;
+  data: Record<string, unknown> | null;
+  actor_name: string;
+}
+
+export interface ActiveAssignment {
+  vehicle_id: Uuid;
+  incident_id: Uuid;
+  incident_number: string;
+  assigned_at: string;
+}
+
+export interface CallScenario {
+  key: string;
+  title: string;
+  expected_keyword: string;
+}

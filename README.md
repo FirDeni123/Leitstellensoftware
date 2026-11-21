@@ -12,7 +12,9 @@ gleichzeitig arbeitende Disponenten.
 
 ## Stand
 
-**Phase 2 (Administration) ist abgeschlossen** (Version 0.2.0). Umgesetzt sind Grundsystem
+**Phase 3 (Einsatzbearbeitung) ist abgeschlossen** (Version 0.3.0): Notrufannahme mit
+simulierten Anrufen, Einsätze mit lückenlosen Nummern, Fahrzeugzuordnung und
+unveränderbarem Einsatzverlauf. Umgesetzt sind Grundsystem
 (Anmeldung, Rechte, Änderungsprotokoll, Echtzeit, Windows-Client mit anpassbaren
 Arbeitsplätzen) sowie die Stammdatenverwaltung: Leitstellen mit Verknüpfungen und
 Zuständigkeitsbereichen, Organisationen, Fahrzeugtypen, Wachen, Fahrzeuge, RICs,

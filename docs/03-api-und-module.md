@@ -71,11 +71,30 @@ Alle Stammdaten-Endpunkte haben dieselbe Form: `GET` Liste (`control_center_id`,
 | `GET /responsibility?latitude&longitude` | – | zuständige Leitstelle(n) nach Priorität |
 | `/imports` | `data.import` + `vehicles.write`/`stations.write` | `POST` (multipart: `file`, `kind`, `control_center_id`), `PUT /{id}/mapping`, `POST /{id}/commit` (`skip_invalid`), `DELETE /{id}` |
 
+### Umgesetzt (Phase 3)
+
+| Methode | Pfad | Berechtigung | Zweck |
+|---|---|---|---|
+| GET/POST/PATCH/DELETE | `/keywords…` | lesen `master_data.read`, schreiben `keywords.write` | Stichwortkatalog |
+| GET | `/calls` (`control_center_id`, `include_ended`) | `calls.handle` | Warteschlange nach Priorität und Eingang |
+| POST | `/calls` | `calls.handle` | Anruf manuell erfassen (direkt angenommen) |
+| PATCH | `/calls/{id}` | `calls.handle` (nur bearbeitende Person) | Anruferdaten, Einsatzort, Einsatzgrund, Priorität |
+| POST | `/calls/{id}/answer` · `/hold` · `/resume` · `/end` | `calls.handle` | Lebenszyklus; Annahme genau einmal (409 mit Name); neues Gespräch hält das bisherige |
+| POST | `/calls/{id}/notes` | `calls.handle` | Gesprächsnotiz oder Rückfrage (`kind=question`) |
+| POST | `/calls/{id}/link` | `calls.handle` + `incidents.write` | Notruf einem bestehenden Einsatz zuordnen |
+| GET | `/incidents` (`scope=open|closed|all`, `q`) · `/incidents/{id}` | `incidents.read` | Einsatzliste, Einsatzdetail (Fahrzeuge, Wachen, Notrufe) |
+| POST | `/incidents` (optional `call_id`) | `incidents.write` | Einsatz anlegen, aus Notruf mit Datenübernahme |
+| PATCH | `/incidents/{id}` | `incidents.write` | Einsatzdaten (Optimistic Locking, Verlaufseintrag mit Feldänderungen) |
+| POST | `/incidents/{id}/status` | `incidents.write`; Abschließen/Wiedereröffnen `incidents.close` | Statusmodell mit Abschlussregeln |
+| POST/DELETE | `/incidents/{id}/vehicles…` | `incidents.write` | Fahrzeuge zuordnen (`reassign` = umsetzen) / freigeben |
+| GET/POST | `/incidents/{id}/events` · `/notes` | `incidents.read` / `incidents.write` | Einsatzverlauf, Dokumentation |
+| GET | `/incidents/active-assignments` | `incidents.read` | aktuell gebundene Fahrzeuge |
+| GET/POST | `/simulation/call-scenarios` · `/simulation/calls` | `simulation.control` | simulierte Notrufe (im Echtbetrieb gesperrt) |
+
 ### Geplant
 
 | Phase | Ressourcen |
 |---|---|
-| 3 | `/calls` (annehmen, halten, beenden, zuordnen), `/calls/{id}/notes`, `/incidents`, `/incidents/{id}/events`, `/incidents/{id}/vehicles` (zuordnen, abziehen, umsetzen), `/incidents/{id}/close` |
 | 4 | `/keywords`, `/alarm-rules`, `/incidents/{id}/alarm-preview`, `/incidents/{id}/alarms` (mit Idempotency-Key), `/police-notices/{id}/acknowledge`, `/interfaces` (+ `/test`, `/events`), `/plugins` |
 | 5 | `/incidents/{id}/proposal` (berechnen, mit Begründungen), `/proposal-settings` |
 | 6 | `/vehicles/{id}/status`, `/talk-requests` (annehmen, zurückstellen, ablehnen), `/simulation/vehicles/{id}/move`, `/simulation/control` (Ausfall, Pause), `/routing/route` |
@@ -99,7 +118,7 @@ Schließcodes: `4001` Authentifizierung fehlgeschlagen/abgelaufen · `4002` Rech
 **Event-Themen** (`topic`), umgesetzt: `user.created`, `user.updated`, `me.changed`,
 `role.changed`, `control_center.changed`, `audit.created`, `system.mode_changed`,
 `layout.changed`, `master_data.changed` (`data.collection` nennt die betroffene Sammlung,
-z. B. `vehicles`; zugestellt nur an Benutzer der betroffenen Leitstelle). Geplant: `call.*`, `incident.*`, `alarm.*`, `police_notice.created`,
+z. B. `vehicles`; zugestellt nur an Benutzer der betroffenen Leitstelle). `call.changed` (Aktion `ringing`, `answered`, `on_hold`, …), `incident.changed`. Geplant: `alarm.*`, `police_notice.created`,
 `vehicle.status`, `vehicle.positions` (gebündelt je Takt), `talk_request.*`,
 `interface.status`, `training.*`.
 

@@ -557,3 +557,26 @@ async def test_tenant_scoping_of_calls_and_incidents(client, setup):
         json={"incident_id": foreign["id"], "expected_version": answered["version"]},
     )
     assert r.status_code == 403
+
+
+async def test_answering_a_second_call_holds_the_first(client, setup):
+    """A dispatcher never has two active calls: like a desk phone, the first one is held."""
+    ctx = setup
+    first, second = await _sim_call(client, ctx), await _sim_call(client, ctx)
+    await client.post(f"/calls/{first['id']}/answer", headers=ctx["dispo"], json={})
+    await client.post(f"/calls/{second['id']}/answer", headers=ctx["dispo"], json={})
+    calls = {
+        c["id"]: c
+        for c in (
+            await client.get("/calls", headers=ctx["dispo"], params={"control_center_id": ctx["cc"]["id"]})
+        ).json()
+    }
+    assert calls[first["id"]]["status"] == "on_hold" and calls[second["id"]]["status"] == "active"
+    await client.post(f"/calls/{first['id']}/resume", headers=ctx["dispo"], json={})
+    calls = {
+        c["id"]: c
+        for c in (
+            await client.get("/calls", headers=ctx["dispo"], params={"control_center_id": ctx["cc"]["id"]})
+        ).json()
+    }
+    assert calls[first["id"]]["status"] == "active" and calls[second["id"]]["status"] == "on_hold"
