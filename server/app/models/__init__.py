@@ -14,6 +14,15 @@ from app.models.master_data import (
     VehicleStatusDefinition,
     VehicleType,
 )
+from app.models.operations import (
+    CallNote,
+    EmergencyCall,
+    Incident,
+    IncidentEvent,
+    IncidentNumberSequence,
+    IncidentVehicle,
+    Keyword,
+)
 from app.models.settings import OperationMode, SystemSetting, UserLayout
 from app.models.user import (
     Permission,
@@ -27,6 +36,13 @@ from app.models.user import (
 )
 
 __all__ = [
+    "CallNote",
+    "EmergencyCall",
+    "Incident",
+    "IncidentEvent",
+    "IncidentNumberSequence",
+    "IncidentVehicle",
+    "Keyword",
     "AlarmGroup",
     "ControlCenterArea",
     "ControlCenterLink",

@@ -163,3 +163,26 @@ def test_master_data_events_are_scoped_to_control_center(tc):
         station_id = event["data"]["id"]
     own_station = tc.get(f"/api/v1/stations/{station_id}", headers=headers).json()
     assert own_station["name"] == "Eigene Wache"
+
+
+def test_ringing_call_reaches_call_takers_of_the_control_center(tc):
+    admin = _login(tc, "admin", ADMIN_PASSWORD)
+    headers = {"Authorization": f"Bearer {admin['access_token']}"}
+    cc = tc.post(
+        "/api/v1/control-centers", headers=headers, json={"code": "ILS-RT", "name": "Echtzeit"}
+    ).json()
+    users = tc.get("/api/v1/users", headers=headers).json()["items"]
+    dispo = next(u for u in users if u["username"] == "dispo")
+    tc.patch(
+        f"/api/v1/users/{dispo['id']}",
+        headers=headers,
+        json={"control_center_ids": [cc["id"]], "expected_version": dispo["version"]},
+    )
+    dispo_tokens = _login(tc, "dispo", USER_PASSWORD)
+    with tc.websocket_connect(WS) as ws:
+        _connect(ws, dispo_tokens["access_token"])
+        r = tc.post("/api/v1/simulation/calls", headers=headers, json={"control_center_id": cc["id"]})
+        assert r.status_code == 201, r.text
+        event = _next_event(ws)
+        assert event["topic"] == "call.changed" and event["data"]["action"] == "ringing"
+        assert event["data"]["id"] == r.json()[0]["id"]

@@ -64,7 +64,7 @@ async def bootstrap(admin_username: str, admin_password: str | None) -> None:
         ref = await ensure_reference_data(uow)
         print(
             f"Referenzdaten: {ref['statuses']} Status, {ref['organizations']} Organisationen, "
-            f"{ref['vehicle_types']} Fahrzeugtypen angelegt"
+            f"{ref['vehicle_types']} Fahrzeugtypen, {ref['keywords']} Stichworte angelegt"
         )
         print(
             f"Berechtigungskatalog: {result['permissions_added']} neu, "

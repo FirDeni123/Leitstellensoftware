@@ -45,6 +45,7 @@ from app.schemas.master_data import (
     VehicleTypeUpdate,
     VehicleUpdate,
 )
+from app.schemas.operations import KeywordCreate, KeywordOut, KeywordUpdate
 from app.services import master_data as md
 
 router = APIRouter()
@@ -279,3 +280,16 @@ async def delete_link(link_id: uuid.UUID, auth: LinkWrite, uow: UowDep) -> None:
         "master_data.changed", {"collection": "control-center-links", "id": str(link_id), "action": "deleted"}
     )
     await uow.commit()
+
+
+register_crud(
+    router,
+    spec=md.KEYWORDS,
+    path="/keywords",
+    create_model=KeywordCreate,
+    update_model=KeywordUpdate,
+    out_model=KeywordOut,
+    read_perm=P.MASTER_DATA_READ,
+    write_perm=P.KEYWORDS_WRITE,
+    filters={"category": str},
+)

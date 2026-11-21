@@ -62,6 +62,9 @@ class Settings(BaseSettings):
     # (allows key rotation). Generate with: ils-admin generate-key
     encryption_keys: str = _DEV_ENCRYPTION_KEY
 
+    # Local time zone of the control centres (e.g. year of incident numbers).
+    timezone: str = "Europe/Berlin"
+
     # --- Realtime -------------------------------------------------------------------------
     ws_auth_timeout_seconds: float = 5.0
     ws_heartbeat_seconds: float = 20.0

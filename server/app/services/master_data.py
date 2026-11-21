@@ -15,6 +15,7 @@ from app.core.geo import normalise_geometry
 from app.models import (
     AlarmGroup,
     ControlCenterArea,
+    Keyword,
     Organization,
     RadioGroup,
     Ric,
@@ -240,6 +241,21 @@ RADIO_GROUPS = CrudSpec(
     search=("name", "talkgroup"),
     unique_message="mit diesem Namen existiert bereits",
     in_use_message="ist noch Fahrzeugen zugeordnet",
+)
+
+KEYWORDS = CrudSpec(
+    model=Keyword,
+    entity_type="keyword",
+    collection="keywords",
+    label="Einsatzstichwort",
+    title=lambda k: k.code,
+    fields=("name", "category", "default_priority", "description", "is_active"),
+    create_only=("code",),
+    scoped=False,
+    search=("code", "name"),
+    order_by=("code",),
+    unique_message="mit diesem Kürzel existiert bereits",
+    in_use_message="wird noch von Einsätzen verwendet – stattdessen deaktivieren",
 )
 
 AREAS = CrudSpec(

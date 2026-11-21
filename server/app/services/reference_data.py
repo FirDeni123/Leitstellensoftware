@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from sqlalchemy import select, text
 
-from app.models import Organization, SystemSetting, VehicleStatusDefinition, VehicleType
+from app.models import Keyword, Organization, SystemSetting, VehicleStatusDefinition, VehicleType
 from app.services.uow import UnitOfWork
 
 SEED_FLAG = "reference_data_seeded_v1"
@@ -72,6 +72,29 @@ VEHICLE_TYPE_DEFAULTS: tuple[tuple[str, str, str, int, int | None, list[str]], .
 )
 
 
+KEYWORD_SEED_FLAG = "keywords_seeded_v1"
+
+# code, name, category (incident type), default priority (1 = highest)
+KEYWORD_DEFAULTS: tuple[tuple[str, str, str, int], ...] = (
+    ("B1", "Kleinbrand (z. B. Mülleimer, Flächenbrand klein)", "fire", 3),
+    ("B2", "Mittelbrand (z. B. Pkw, Zimmer)", "fire", 2),
+    ("B3", "Großbrand / Gebäudevollbrand", "fire", 1),
+    ("B-MIG", "Brand – Menschenleben in Gefahr", "fire", 1),
+    ("BMA", "Brandmeldeanlage ausgelöst", "fire", 2),
+    ("H1", "Technische Hilfe klein (z. B. Ölspur, Baum auf Fahrbahn)", "technical", 3),
+    ("H2", "Technische Hilfe mittel (z. B. Verkehrsunfall mit Verletzten)", "technical", 2),
+    ("H-KLEMM", "Verkehrsunfall – Person eingeklemmt", "technical", 1),
+    ("W1", "Wasserrettung – Person im Wasser", "water", 1),
+    ("ABC1", "Gefahrstoffaustritt klein", "hazmat", 2),
+    ("ABC2", "Gefahrstoffaustritt mit Gefährdung von Personen", "hazmat", 1),
+    ("RD1", "Rettungsdienst – Notfall ohne Notarzt", "ems", 2),
+    ("RD2", "Rettungsdienst – Notfall mit Notarzt", "ems", 1),
+    ("RD-KTP", "Krankentransport", "ems", 3),
+    ("MANV", "Massenanfall von Verletzten", "ems", 1),
+    ("S1", "Sonstiges / Unterstützung", "other", 3),
+)
+
+
 async def ensure_reference_data(uow: UnitOfWork) -> dict[str, int]:
     s = uow.session
     await s.execute(text("SELECT pg_advisory_xact_lock(470012)"))
@@ -109,12 +132,22 @@ async def ensure_reference_data(uow: UnitOfWork) -> dict[str, int]:
                 types += 1
         s.add(SystemSetting(key=SEED_FLAG, value=True))
 
-    if statuses or orgs or types:
+    keywords = 0
+    if await s.get(SystemSetting, KEYWORD_SEED_FLAG) is None:
+        codes = set((await s.scalars(select(Keyword.code))).all())
+        for code, name, category, priority in KEYWORD_DEFAULTS:
+            if code not in codes:
+                s.add(Keyword(code=code, name=name, category=category, default_priority=priority))
+                keywords += 1
+        s.add(SystemSetting(key=KEYWORD_SEED_FLAG, value=True))
+
+    if statuses or orgs or types or keywords:
         uow.audit(
             "sync",
             "reference_data",
             None,
-            f"Referenzdaten angelegt ({statuses} Status, {orgs} Organisationen, {types} Fahrzeugtypen)",
+            f"Referenzdaten angelegt ({statuses} Status, {orgs} Organisationen, {types} Fahrzeugtypen, "
+            f"{keywords} Einsatzstichworte)",
         )
     await uow.commit()
-    return {"statuses": statuses, "organizations": orgs, "vehicle_types": types}
+    return {"statuses": statuses, "organizations": orgs, "vehicle_types": types, "keywords": keywords}
