@@ -83,7 +83,7 @@ async def test_relationship_change_increments_version(client, admin_headers):
     )
     assert r.status_code == 200
     assert r.json()["version"] == target["version"] + 1
-    assert r.json()["effective_permissions"] == ["control_centers.read", "incidents.read"]
+    assert r.json()["effective_permissions"] == ["control_centers.read", "incidents.read", "master_data.read"]
 
 
 async def test_permission_overrides(client, admin_headers):

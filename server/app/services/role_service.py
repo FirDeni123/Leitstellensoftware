@@ -5,7 +5,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import exists, select
+from sqlalchemy import exists, select, text
 from sqlalchemy.exc import IntegrityError
 
 from app.core.errors import ConflictError, NotFoundError, ValidationFailedError
@@ -137,13 +137,17 @@ class RoleService:
 async def sync_catalogue(uow: UnitOfWork) -> dict[str, int]:
     """Synchronise the permission catalogue and create missing default roles (idempotent)."""
     s = uow.session
+    # Several API workers may start at the same time: serialise the synchronisation.
+    await s.execute(text("SELECT pg_advisory_xact_lock(470011)"))
     existing = {p.code: p for p in (await s.scalars(select(Permission))).all()}
     added = 0
+    new_codes: set[str] = set()
     for info in CATALOGUE:
         perm = existing.get(info.code.value)
         if perm is None:
             s.add(Permission(code=info.code.value, area=info.area, description=info.description))
             added += 1
+            new_codes.add(info.code.value)
         else:
             perm.area, perm.description = info.area, info.description
     await s.flush()
@@ -162,10 +166,15 @@ async def sync_catalogue(uow: UnitOfWork) -> dict[str, int]:
                 )
             )
             roles_created += 1
-        elif definition.key == "admin":
-            # The administrator role always holds every permission, including new ones.
+        else:
+            # Newly introduced permissions are granted once to the system roles whose default
+            # definition contains them (existing, possibly edited assignments stay untouched).
+            # The administrator role always holds every permission.
             have = {p.code for p in role.permissions}
-            missing = [all_perms[c] for c in definition.permissions if c not in have]
+            wanted = (
+                definition.permissions if definition.key == "admin" else definition.permissions & new_codes
+            )
+            missing = [all_perms[c] for c in sorted(wanted) if c not in have]
             if missing:
                 role.permissions = [*role.permissions, *missing]
     if added or roles_created:

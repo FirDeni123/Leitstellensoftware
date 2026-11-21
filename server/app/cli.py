@@ -26,6 +26,7 @@ from app.core.security import generate_initial_password, hash_password, validate
 from app.db.session import Database
 from app.models import ControlCenter, Role, User
 from app.realtime.bus import InMemoryEventBus
+from app.services.reference_data import ensure_reference_data
 from app.services.role_service import sync_catalogue
 from app.services.uow import UnitOfWork
 
@@ -59,6 +60,11 @@ async def _with_uow(fn):  # type: ignore[no-untyped-def]
 async def bootstrap(admin_username: str, admin_password: str | None) -> None:
     async def run(uow: UnitOfWork) -> None:
         result = await sync_catalogue(uow)
+        ref = await ensure_reference_data(uow)
+        print(
+            f"Referenzdaten: {ref['statuses']} Status, {ref['organizations']} Organisationen, "
+            f"{ref['vehicle_types']} Fahrzeugtypen angelegt"
+        )
         print(
             f"Berechtigungskatalog: {result['permissions_added']} neu, "
             f"Rollen angelegt: {result['roles_created']}"

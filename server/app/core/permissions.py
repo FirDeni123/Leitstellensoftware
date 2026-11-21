@@ -23,6 +23,8 @@ class P(StrEnum):
     ROLES_WRITE = "roles.write"
     LOGIN_LOG_READ = "login_log.read"
     # Master data
+    MASTER_DATA_READ = "master_data.read"  # stations, vehicles, RICs, radio groups, organisations
+    ORGANIZATIONS_WRITE = "organizations.write"  # organisations and vehicle types (global catalogues)
     CONTROL_CENTERS_READ = "control_centers.read"
     CONTROL_CENTERS_WRITE = "control_centers.write"
     STATIONS_WRITE = "stations.write"
@@ -65,6 +67,10 @@ CATALOGUE: tuple[PermissionInfo, ...] = (
     PermissionInfo(P.USERS_WRITE, "Benutzer", "Benutzer anlegen, bearbeiten, deaktivieren"),
     PermissionInfo(P.ROLES_WRITE, "Benutzer", "Rollen und Berechtigungen verwalten"),
     PermissionInfo(P.LOGIN_LOG_READ, "Benutzer", "Anmeldeprotokoll einsehen"),
+    PermissionInfo(
+        P.MASTER_DATA_READ, "Stammdaten", "Stammdaten anzeigen (Wachen, Fahrzeuge, RICs, Funkrufgruppen …)"
+    ),
+    PermissionInfo(P.ORGANIZATIONS_WRITE, "Stammdaten", "Organisationen und Fahrzeugtypen verwalten"),
     PermissionInfo(P.CONTROL_CENTERS_READ, "Stammdaten", "Leitstellen anzeigen"),
     PermissionInfo(P.CONTROL_CENTERS_WRITE, "Stammdaten", "Leitstellen verwalten"),
     PermissionInfo(P.STATIONS_WRITE, "Stammdaten", "Wachen verwalten"),
@@ -102,6 +108,7 @@ _OPERATIONS = {
     P.VEHICLES_STATUS_SET,
     P.RADIO_HANDLE,
     P.CONTROL_CENTERS_READ,
+    P.MASTER_DATA_READ,
     P.TRAINING_PARTICIPATE,
 }
 
@@ -127,6 +134,7 @@ DEFAULT_ROLES: tuple[RoleDefinition, ...] = (
                 P.AUDIT_READ,
                 P.USERS_READ,
                 P.LOGIN_LOG_READ,
+                P.ORGANIZATIONS_WRITE,
                 P.STATIONS_WRITE,
                 P.VEHICLES_WRITE,
                 P.RICS_WRITE,
@@ -157,6 +165,7 @@ DEFAULT_ROLES: tuple[RoleDefinition, ...] = (
                 P.INCIDENTS_READ,
                 P.INCIDENTS_WRITE,
                 P.CONTROL_CENTERS_READ,
+                P.MASTER_DATA_READ,
                 P.TRAINING_PARTICIPATE,
             }
         ),
@@ -165,6 +174,6 @@ DEFAULT_ROLES: tuple[RoleDefinition, ...] = (
         "observer",
         "Beobachter",
         "Nur lesender Zugriff",
-        frozenset(p.value for p in {P.INCIDENTS_READ, P.CONTROL_CENTERS_READ}),
+        frozenset(p.value for p in {P.INCIDENTS_READ, P.CONTROL_CENTERS_READ, P.MASTER_DATA_READ}),
     ),
 )

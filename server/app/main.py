@@ -18,17 +18,29 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
-from app.api.routers import auth, control_centers, system, users, ws
+from app.api.routers import auth, control_centers, imports, master_data, system, users, ws
 from app.core.config import APP_VERSION, Settings, get_settings
 from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging, request_id_var
 from app.db.session import Database
 from app.realtime.bus import create_bus
 from app.realtime.hub import ConnectionHub
+from app.services.reference_data import ensure_reference_data
+from app.services.role_service import sync_catalogue
+from app.services.uow import UnitOfWork
 
 logger = logging.getLogger("app")
 
 API_PREFIX = "/api/v1"
+
+
+async def _synchronise_catalogues(app: FastAPI) -> None:
+    """Permission catalogue + reference data are kept in sync on every start (idempotent,
+    serialised via advisory locks), so updates never require a manual bootstrap."""
+    async with app.state.db.sessionmaker() as session:
+        uow = UnitOfWork(session, app.state.bus)
+        await sync_catalogue(uow)
+        await ensure_reference_data(uow)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -42,6 +54,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.hub = ConnectionHub()
         app.state.bus = create_bus(settings.redis_url)
         await app.state.bus.start(app.state.hub.handle)
+        await _synchronise_catalogues(app)
         logger.info(
             "Server gestartet",
             extra={"ctx": {"version": APP_VERSION, "env": settings.environment, "bus": app.state.bus.name}},
@@ -117,6 +130,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     api.include_router(auth.router)
     api.include_router(users.router)
     api.include_router(control_centers.router)
+    api.include_router(master_data.router)
+    api.include_router(imports.router)
     api.include_router(system.router)
     api.include_router(ws.router)
     app.include_router(api)

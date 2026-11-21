@@ -146,3 +146,32 @@ async def test_in_memory_bus_delivers():
     await bus.publish(BusMessage(kind="event", topic="t", data={}))
     await asyncio.sleep(0)
     assert [m.topic for m in received] == ["t"]
+
+
+def test_geometry_validation_and_point_in_polygon():
+    from app.core.errors import ValidationFailedError
+    from app.core.geo import haversine_m, normalise_geometry, point_in_geometry
+
+    square = normalise_geometry(
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Polygon",
+                "coordinates": [[[10.0, 53.0], [11.0, 53.0], [11.0, 54.0], [10.0, 54.0]]],
+            },
+        }
+    )
+    assert square["type"] == "MultiPolygon"
+    assert square["coordinates"][0][0][0] == square["coordinates"][0][0][-1]  # ring closed automatically
+    assert point_in_geometry(53.5, 10.5, square)
+    assert not point_in_geometry(54.5, 10.5, square)
+    for bad in (
+        {"type": "Point", "coordinates": [10, 53]},
+        {"type": "Polygon", "coordinates": [[[10, 53], [11, 53]]]},
+        {"type": "Polygon", "coordinates": [[[10, 53], [11, 53], [11, 95]]]},
+        "kein geojson",
+    ):
+        with pytest.raises(ValidationFailedError):
+            normalise_geometry(bad)
+    # Schwarzenbek -> Hamburg Rathaus ~ 29 km
+    assert 28_000 < haversine_m(53.5036, 10.4806, 53.5503, 9.9920) < 34_000

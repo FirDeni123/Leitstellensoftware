@@ -125,3 +125,41 @@ def test_logout_closes_session_socket(tc):
             while True:
                 ws.receive_json()
     assert exc.value.code == 4003
+
+
+def test_master_data_events_are_scoped_to_control_center(tc):
+    admin = _login(tc, "admin", ADMIN_PASSWORD)
+    headers = {"Authorization": f"Bearer {admin['access_token']}"}
+    own = tc.post(
+        "/api/v1/control-centers", headers=headers, json={"code": "ILS-OWN", "name": "Eigene"}
+    ).json()
+    other = tc.post(
+        "/api/v1/control-centers", headers=headers, json={"code": "ILS-OTH", "name": "Fremde"}
+    ).json()
+    users = tc.get("/api/v1/users", headers=headers).json()["items"]
+    dispo = next(u for u in users if u["username"] == "dispo")
+    tc.patch(
+        f"/api/v1/users/{dispo['id']}",
+        headers=headers,
+        json={"control_center_ids": [own["id"]], "expected_version": dispo["version"]},
+    )
+    org = next(o for o in tc.get("/api/v1/organizations", headers=headers).json() if o["key"] == "feuerwehr")
+    dispo_tokens = _login(tc, "dispo", USER_PASSWORD)
+    with tc.websocket_connect(WS) as ws:
+        _connect(ws, dispo_tokens["access_token"])
+        tc.post(
+            "/api/v1/stations",
+            headers=headers,
+            json={"control_center_id": other["id"], "organization_id": org["id"], "name": "Fremdwache"},
+        )
+        tc.post(
+            "/api/v1/stations",
+            headers=headers,
+            json={"control_center_id": own["id"], "organization_id": org["id"], "name": "Eigene Wache"},
+        )
+        event = _next_event(ws)
+        assert event["topic"] == "master_data.changed"
+        assert event["data"]["collection"] == "stations" and event["data"]["action"] == "created"
+        station_id = event["data"]["id"]
+    own_station = tc.get(f"/api/v1/stations/{station_id}", headers=headers).json()
+    assert own_station["name"] == "Eigene Wache"

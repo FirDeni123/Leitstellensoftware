@@ -24,6 +24,7 @@ from app.db.session import Database
 from app.main import create_app
 from app.models import Role, User
 from app.realtime.bus import InMemoryEventBus
+from app.services.reference_data import ensure_reference_data
 from app.services.role_service import sync_catalogue
 from app.services.uow import UnitOfWork
 
@@ -35,7 +36,10 @@ USER_PASSWORD = "Test-User-Pass-1!"
 
 DATA_TABLES = (
     "audit_log, login_events, refresh_tokens, auth_sessions, user_layouts, system_settings, "
-    "user_permission_overrides, user_roles, user_control_centers, users, control_centers"
+    "user_permission_overrides, user_roles, user_control_centers, users, "
+    "vehicle_rics, station_rics, alarm_group_rics, radio_group_stations, radio_group_organizations, "
+    "vehicles, import_jobs, stations, rics, alarm_groups, radio_groups, control_center_links, "
+    "control_center_areas, organizations, vehicle_types, vehicle_status_definitions, control_centers"
 )
 
 
@@ -102,6 +106,7 @@ async def _clean(db: Database) -> AsyncIterator[None]:
             ]
         )
         await session.commit()
+        await ensure_reference_data(UnitOfWork(session, InMemoryEventBus()))
     yield
 
 
