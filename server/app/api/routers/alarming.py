@@ -161,7 +161,7 @@ async def delete_rule(
 async def alarm_preview(
     incident_id: uuid.UUID, body: PreviewRequest, request: Request, auth: ReadDep, uow: UowDep
 ) -> Any:
-    service = AlarmService(uow, visible_control_centers(auth), _tz(request))
+    service = AlarmService(uow, visible_control_centers(auth), _tz(request), request.app.state.routing)
     return await service.preview(incident_id, body.stage, body.selection)
 
 
@@ -186,7 +186,9 @@ async def trigger_alarm(
 ) -> AlarmOut:
     if not idempotency_key or not (8 <= len(idempotency_key) <= 80):
         raise ValidationFailedError("Header 'Idempotency-Key' (8–80 Zeichen) fehlt")
-    service = AlarmService(uow_for(auth, uow), visible_control_centers(auth), _tz(request))
+    service = AlarmService(
+        uow_for(auth, uow), visible_control_centers(auth), _tz(request), request.app.state.routing
+    )
     alarm, replayed = await service.trigger(incident_id, body, idempotency_key)
     if replayed:
         response.status_code = status.HTTP_200_OK
@@ -200,7 +202,7 @@ async def trigger_alarm(
 async def incident_alarms(
     incident_id: uuid.UUID, request: Request, auth: ReadDep, uow: UowDep
 ) -> list[AlarmOut]:
-    service = AlarmService(uow, visible_control_centers(auth), _tz(request))
+    service = AlarmService(uow, visible_control_centers(auth), _tz(request), request.app.state.routing)
     return await alarms_out(service, await service.list(None, incident_id, 200))
 
 
@@ -212,13 +214,13 @@ async def list_alarms(
     control_center_id: uuid.UUID | None = None,
     limit: int = Query(default=100, ge=1, le=500),
 ) -> list[AlarmOut]:
-    service = AlarmService(uow, visible_control_centers(auth), _tz(request))
+    service = AlarmService(uow, visible_control_centers(auth), _tz(request), request.app.state.routing)
     return await alarms_out(service, await service.list(control_center_id, None, limit))
 
 
 @router.get("/alarms/{alarm_id}", response_model=AlarmOut, tags=["Alarmierung"])
 async def get_alarm(alarm_id: uuid.UUID, request: Request, auth: ReadDep, uow: UowDep) -> AlarmOut:
-    service = AlarmService(uow, visible_control_centers(auth), _tz(request))
+    service = AlarmService(uow, visible_control_centers(auth), _tz(request), request.app.state.routing)
     return (await alarms_out(service, [await service.get(alarm_id)]))[0]
 
 
@@ -232,7 +234,7 @@ async def list_police_notices(
     only_open: bool = True,
     limit: int = Query(default=100, ge=1, le=500),
 ) -> list[PoliceNoticeOut]:
-    service = AlarmService(uow, visible_control_centers(auth), _tz(request))
+    service = AlarmService(uow, visible_control_centers(auth), _tz(request), request.app.state.routing)
     notices = await service.police_notices(control_center_id, only_open, limit)
     numbers = await service.numbers({n.incident_id for n in notices})
     return [notice_out(n, numbers) for n in notices]
@@ -247,6 +249,8 @@ async def list_police_notices(
 async def acknowledge_police_notice(
     notice_id: uuid.UUID, body: PoliceAcknowledge, request: Request, auth: AckDep, uow: UowDep
 ) -> PoliceNoticeOut:
-    service = AlarmService(uow_for(auth, uow), visible_control_centers(auth), _tz(request))
+    service = AlarmService(
+        uow_for(auth, uow), visible_control_centers(auth), _tz(request), request.app.state.routing
+    )
     notice = await service.acknowledge(notice_id, body.note)
     return notice_out(notice, await service.numbers({notice.incident_id}))

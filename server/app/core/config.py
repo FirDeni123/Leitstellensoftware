@@ -13,7 +13,7 @@ from functools import lru_cache
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-APP_VERSION = "0.4.0"
+APP_VERSION = "0.5.0"
 
 _DEV_JWT_SECRET = "dev-only-insecure-jwt-secret-change-me-0123456789"  # noqa: S105
 # Fernet key used only for development/tests (base64, 32 bytes). Never valid in production.
@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     database_pool_size: int = 10
     # Redis is optional: without it the event bus runs in-process (single server instance).
     redis_url: str | None = None
+    # OSRM routing service for travel times (Phase 5/6); None = straight-line estimate only.
+    osrm_url: str | None = None
+    osrm_timeout_seconds: float = 2.0
 
     # --- HTTP -----------------------------------------------------------------------------
     # app://ils is the origin of the packaged Windows client; localhost ports are the

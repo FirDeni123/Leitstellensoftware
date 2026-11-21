@@ -33,6 +33,7 @@ class P(StrEnum):
     RADIO_GROUPS_WRITE = "radio_groups.write"
     KEYWORDS_WRITE = "keywords.write"
     ALARM_RULES_WRITE = "alarm_rules.write"
+    PROPOSAL_SETTINGS_WRITE = "proposal_settings.write"
     DATA_IMPORT = "data.import"
     # Interfaces
     INTERFACES_READ = "interfaces.read"
@@ -79,6 +80,7 @@ CATALOGUE: tuple[PermissionInfo, ...] = (
     PermissionInfo(P.RADIO_GROUPS_WRITE, "Stammdaten", "Funkrufgruppen verwalten"),
     PermissionInfo(P.KEYWORDS_WRITE, "Stammdaten", "Einsatzstichworte verwalten"),
     PermissionInfo(P.ALARM_RULES_WRITE, "Stammdaten", "Alarmierungsregeln (AAO) verwalten"),
+    PermissionInfo(P.PROPOSAL_SETTINGS_WRITE, "Stammdaten", "Regeln des Einsatzmittelvorschlags verwalten"),
     PermissionInfo(P.DATA_IMPORT, "Stammdaten", "Datenimport (Excel/CSV) durchführen"),
     PermissionInfo(P.INTERFACES_READ, "Schnittstellen", "Schnittstellen anzeigen"),
     PermissionInfo(P.INTERFACES_WRITE, "Schnittstellen", "Schnittstellen konfigurieren"),
@@ -141,6 +143,7 @@ DEFAULT_ROLES: tuple[RoleDefinition, ...] = (
                 P.RADIO_GROUPS_WRITE,
                 P.KEYWORDS_WRITE,
                 P.ALARM_RULES_WRITE,
+                P.PROPOSAL_SETTINGS_WRITE,
                 P.DATA_IMPORT,
                 P.INTERFACES_READ,
                 P.SIMULATION_CONTROL,

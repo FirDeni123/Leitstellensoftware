@@ -96,6 +96,8 @@ class PreviewVehicle(ApiModel):
     station: str
     status_code: int
     distance_km: float | None
+    travel_seconds: int | None = None
+    travel_source: Literal["osrm", "estimate", "none"] | None = None
     reason: str
     assigned: bool
 

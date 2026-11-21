@@ -32,6 +32,7 @@ from app.models.operations import (
     IncidentVehicle,
     Keyword,
 )
+from app.models.proposals import Proposal, ProposalSettings
 from app.models.settings import OperationMode, SystemSetting, UserLayout
 from app.models.user import (
     Permission,
@@ -52,6 +53,8 @@ __all__ = [
     "Interface",
     "InterfaceEvent",
     "PoliceNotice",
+    "Proposal",
+    "ProposalSettings",
     "CallNote",
     "EmergencyCall",
     "Incident",

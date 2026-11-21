@@ -26,6 +26,7 @@ from app.api.routers import (
     interfaces,
     master_data,
     operations,
+    proposals,
     system,
     users,
     ws,
@@ -36,6 +37,7 @@ from app.core.errors import register_exception_handlers
 from app.core.logging import configure_logging, request_id_var
 from app.db.session import Database
 from app.plugins.registry import load_entry_points
+from app.proposal.travel import OsrmProvider
 from app.realtime.bus import create_bus
 from app.realtime.hub import ConnectionHub
 from app.services.alarm_delivery import recover_interrupted_deliveries
@@ -67,6 +69,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.settings = settings
         app.state.secret_box = SecretBox.from_config(settings.encryption_keys)
         app.state.db = Database(settings)
+        app.state.routing = (
+            OsrmProvider(settings.osrm_url, settings.osrm_timeout_seconds) if settings.osrm_url else None
+        )
         load_entry_points()
         app.state.hub = ConnectionHub()
         app.state.bus = create_bus(settings.redis_url)
@@ -152,6 +157,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     api.include_router(operations.router)
     api.include_router(alarming.router)
     api.include_router(interfaces.router)
+    api.include_router(proposals.router)
     api.include_router(system.router)
     api.include_router(ws.router)
     app.include_router(api)

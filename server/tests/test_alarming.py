@@ -251,7 +251,8 @@ async def test_m4_preview_for_b2_is_correct_and_triggers_nothing(client, ctx, db
     # Nearest HLF (own station, ~0.1 km) instead of the neighbouring station; DLK; no RTW in stage 1.
     assert set(calls) == {"Florian Ops 1/46-1", "Florian Ops 1/33-1"}
     assert calls["Florian Ops 1/46-1"]["distance_km"] < 1
-    assert calls["Florian Ops 1/46-1"]["reason"].startswith("AAO Stufe 1")
+    assert calls["Florian Ops 1/46-1"]["reason"].startswith("AAO B2, Stufe 1: HLF20 (Bedarf 1/1)")
+    assert calls["Florian Ops 1/46-1"]["travel_seconds"] is not None
     assert [r["label"] for r in preview["rics"]] == ["1234501 LZ Ops Vollalarm"]
     assert preview["police_notice"] is None and preview["warnings"] == []
     assert set(preview["selection"]["vehicle_ids"]) == {

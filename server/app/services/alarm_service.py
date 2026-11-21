@@ -20,17 +20,16 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 
 from app.core.errors import ConflictError, NotFoundError, ValidationFailedError
-from app.core.geo import haversine_m, point_in_geometry
+from app.core.geo import haversine_m
 from app.models import (
     Alarm,
     AlarmGroup,
     AlarmRule,
     AlarmTarget,
-    ControlCenterArea,
     Incident,
     IncidentEvent,
     IncidentVehicle,
@@ -40,13 +39,15 @@ from app.models import (
     Ric,
     Station,
     Vehicle,
-    VehicleStatusDefinition,
 )
 from app.plugins.registry import get_plugin
+from app.proposal.travel import RoutingProvider
 from app.schemas.alarming import AlarmCreate, AlarmSelection
+from app.services.aao import active_assignments
 from app.services.alarm_rule_service import target_label
 from app.services.incident_service import NO_ASSIGNMENT_STATUSES, STATUS_LABEL, IncidentService
 from app.services.interface_service import is_effective
+from app.services.proposal_service import Computation, ProposalService
 from app.services.uow import UnitOfWork
 
 KIND_LABEL = {"initial": "Erstalarm", "follow_up": "Nachalarmierung", "manual": "Alarmierung"}
@@ -96,6 +97,7 @@ class Composition:
     explicit_interface_ids: list[uuid.UUID] = field(default_factory=list)
     already_alarmed: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    travel: dict[uuid.UUID, tuple[int, str]] = field(default_factory=dict)  # seconds, source
 
     def selection(self) -> AlarmSelection:
         return AlarmSelection(
@@ -108,11 +110,17 @@ class Composition:
 
 class AlarmService:
     def __init__(
-        self, uow: UnitOfWork, visible: set[uuid.UUID] | None, timezone: str = "Europe/Berlin"
+        self,
+        uow: UnitOfWork,
+        visible: set[uuid.UUID] | None,
+        timezone: str = "Europe/Berlin",
+        routing: RoutingProvider | None = None,
     ) -> None:
         self.uow = uow
         self.s = uow.session
         self.visible = visible
+        self.routing = routing
+        self.timezone = timezone
         self.incidents = IncidentService(uow, visible, timezone)
 
     async def _mode(self) -> OperationMode:
@@ -121,50 +129,8 @@ class AlarmService:
         return await SystemService(self.uow).operation_mode()
 
     # ------------------------------------------------------------------------ lookups
-    async def _rule_for(self, incident: Incident) -> tuple[AlarmRule | None, str | None]:
-        if incident.keyword_id is None:
-            return None, None
-        rules = list(
-            (
-                await self.s.scalars(
-                    select(AlarmRule).where(
-                        AlarmRule.control_center_id == incident.control_center_id,
-                        AlarmRule.keyword_id == incident.keyword_id,
-                        AlarmRule.is_active.is_(True),
-                    )
-                )
-            ).all()
-        )
-        general = next((r for r in rules if r.area_id is None), None)
-        area_rules = [r for r in rules if r.area_id is not None]
-        if area_rules and incident.latitude is not None and incident.longitude is not None:
-            areas = {
-                a.id: a
-                for a in (
-                    await self.s.scalars(
-                        select(ControlCenterArea).where(
-                            ControlCenterArea.id.in_([r.area_id for r in area_rules])
-                        )
-                    )
-                ).all()
-            }
-            matching = [
-                (areas[r.area_id], r)
-                for r in area_rules
-                if r.area_id in areas
-                and areas[r.area_id].geometry
-                and point_in_geometry(incident.latitude, incident.longitude, areas[r.area_id].geometry)
-            ]
-            if matching:
-                area, rule = min(matching, key=lambda m: (m[0].priority, m[0].name))
-                return rule, area.name
-        return general, None
-
     async def _active_assignments(self, incident: Incident) -> list[IncidentVehicle]:
-        stmt = select(IncidentVehicle).where(
-            IncidentVehicle.incident_id == incident.id, IncidentVehicle.released_at.is_(None)
-        )
-        return list((await self.s.scalars(stmt.order_by(IncidentVehicle.id))).all())
+        return await active_assignments(self.s, incident)
 
     def _distance_km(self, incident: Incident, vehicle: Vehicle) -> float | None:
         if incident.latitude is None or incident.longitude is None:
@@ -175,60 +141,29 @@ class AlarmService:
             return None
         return round(haversine_m(incident.latitude, incident.longitude, lat, lon) / 1000, 1)
 
-    async def _candidates(self, incident: Incident) -> list[Vehicle]:
-        """Free vehicles for a proposal: available, status counts as available, not bound to any
-        incident, alarmable organisation – sorted by straight-line distance (simple proposal;
-        the full Einsatzmittelvorschlag with routing follows in phase 5)."""
-        codes = select(VehicleStatusDefinition.code).where(
-            VehicleStatusDefinition.counts_as_available.is_(True)
-        )
-        busy = select(IncidentVehicle.vehicle_id).where(IncidentVehicle.released_at.is_(None))
-        rows = (
-            await self.s.scalars(
-                select(Vehicle).where(
-                    Vehicle.control_center_id == incident.control_center_id,
-                    Vehicle.available.is_(True),
-                    Vehicle.status_code.in_(codes),
-                    Vehicle.id.not_in(busy),
-                )
-            )
-        ).all()
-        usable = [v for v in rows if v.organization.alarmable and v.station.is_active]
-        return sorted(
-            usable,
-            key=lambda v: (
-                d if (d := self._distance_km(incident, v)) is not None else float("inf"),
-                v.call_sign,
-            ),
-        )
-
     # --------------------------------------------------------------------- composition
     async def compose(
         self, incident: Incident, stage: int | None, selection: AlarmSelection | None, mode: OperationMode
     ) -> Composition:
         comp = Composition()
-        comp.rule, comp.area_name = await self._rule_for(incident)
-        rule = comp.rule
-        comp.max_stage = max((i.stage for i in rule.items), default=0) if rule else 0
-        previous = (
-            await self.s.execute(
-                select(func.count(Alarm.id), func.max(Alarm.stage)).where(Alarm.incident_id == incident.id)
-            )
-        ).one()
-        comp.next_kind = "follow_up" if previous[0] else "initial"
-        last_stage = previous[1] or 0
-        if stage is None and comp.max_stage:
-            stage = min(last_stage + 1, comp.max_stage)
-            if previous[0] and last_stage >= comp.max_stage:
-                comp.warnings.append("Alle Stufen der AAO wurden bereits alarmiert")
-        comp.stage = stage
+        # Vehicle demand is computed by the Einsatzmittelvorschlag (same scoring and reasons).
+        computation = await ProposalService(self.uow, self.visible, self.routing, self.timezone).compute(
+            incident, stage, []
+        )
+        comp.rule, comp.area_name = computation.rule, computation.area_name
+        comp.max_stage, comp.next_kind, comp.stage = (
+            computation.max_stage,
+            computation.next_kind,
+            computation.stage,
+        )
+        stage = computation.stage
 
         active = await self._active_assignments(incident)
         alarmed = {a.vehicle_id for a in active if a.alarmed_at is not None}
         comp.already_alarmed = [a.vehicle.call_sign for a in active if a.alarmed_at is not None]
         in_incident = {a.vehicle_id: a.vehicle for a in active}
 
-        proposal = await self._propose(incident, comp, stage, active, alarmed)
+        proposal = await self._propose(incident, comp, stage, active, computation)
         reasons = {v.id: reason for v, reason in proposal["vehicles"]}
         if selection is None:
             chosen_vehicles = [v for v, _ in proposal["vehicles"]]
@@ -257,6 +192,9 @@ class AlarmService:
             comp.explicit_ric_ids = [r.id for r, _ in explicit_rics]
             comp.explicit_interface_ids = [i.id for i, _ in explicit_interfaces]
         comp.warnings.extend(proposal["warnings"] if selection is None else [])
+        for pick in computation.result.picks:
+            if pick.travel is not None and pick.travel.seconds is not None:
+                comp.travel[pick.unit.id] = (round(pick.travel.seconds), pick.travel.source)
 
         for vehicle in chosen_vehicles:
             if vehicle.id in alarmed:
@@ -324,7 +262,7 @@ class AlarmService:
         comp: Composition,
         stage: int | None,
         active: list[IncidentVehicle],
-        alarmed: set[uuid.UUID],
+        computation: Computation,
     ) -> dict[str, list[Any]]:
         vehicles: list[tuple[Vehicle, str]] = []
         stations: list[tuple[Station, str]] = []
@@ -332,66 +270,22 @@ class AlarmService:
         interfaces: list[tuple[Interface, str]] = []
         warnings: list[str] = []
         picked: set[uuid.UUID] = set()
-        # Vehicles already in the incident count towards the AAO demand first.
-        pool = [a.vehicle for a in active]
+        warnings.extend(computation.warnings)
+        warnings.extend(s.message for s in computation.result.shortfalls)
+        for pick in computation.result.picks:
+            if pick.alarmed:
+                continue  # already alarmed – nothing to do
+            vehicle = await self.s.get(Vehicle, pick.unit.id)
+            if vehicle is not None and vehicle.id not in picked:
+                vehicles.append((vehicle, " · ".join(pick.reasons)))
+                picked.add(vehicle.id)
         rule = comp.rule
-        if rule is None:
-            if incident.keyword_id is None:
-                warnings.append("Kein Stichwort gesetzt – Einsatzmittel bitte manuell auswählen")
-            else:
-                code = incident.keyword.code if incident.keyword else ""
-                warnings.append(f"Keine AAO für {code} hinterlegt – Einsatzmittel bitte manuell auswählen")
-        elif stage:
-            candidates = await self._candidates(incident)
+        if rule is not None and stage:
             for item in [i for i in rule.items if i.stage <= stage]:
                 why = f"AAO Stufe {item.stage}"
-                if item.kind == "vehicle_type":
-                    need = item.count
-                    for vehicle in [v for v in pool if v.vehicle_type_id == item.vehicle_type_id]:
-                        if not need:
-                            break
-                        pool.remove(vehicle)
-                        need -= 1
-                        if vehicle.id not in alarmed:
-                            vehicles.append((vehicle, f"{why}: {vehicle.vehicle_type.code} (zugeordnet)"))
-                            picked.add(vehicle.id)
-                    for vehicle in candidates:
-                        if not need:
-                            break
-                        if vehicle.vehicle_type_id == item.vehicle_type_id and vehicle.id not in picked:
-                            vehicles.append((vehicle, f"{why}: {vehicle.vehicle_type.code}"))
-                            picked.add(vehicle.id)
-                            need -= 1
-                    if need:
-                        type_code = next(
-                            (
-                                v.vehicle_type.code
-                                for v in candidates
-                                if v.vehicle_type_id == item.vehicle_type_id
-                            ),
-                            None,
-                        ) or await self._type_code(item.vehicle_type_id)
-                        warnings.append(
-                            f"{type_code}: {need} von {item.count} nicht verfügbar (Stufe {item.stage})"
-                        )
-                elif item.kind == "vehicle":
-                    in_pool = next((v for v in pool if v.id == item.vehicle_id), None)
-                    if in_pool is not None:
-                        pool.remove(in_pool)
-                        if in_pool.id not in alarmed:
-                            vehicles.append((in_pool, f"{why} (zugeordnet)"))
-                            picked.add(in_pool.id)
-                        continue
-                    candidate = next((v for v in candidates if v.id == item.vehicle_id), None)
-                    if candidate is not None and candidate.id not in picked:
-                        vehicles.append((candidate, why))
-                        picked.add(candidate.id)
-                    elif candidate is None:
-                        vehicle = await self.s.get(Vehicle, item.vehicle_id)
-                        warnings.append(
-                            f"{vehicle.call_sign if vehicle else 'Fahrzeug'} ist nicht verfügbar ({why})"
-                        )
-                elif item.kind == "station":
+                if item.kind in ("vehicle_type", "vehicle"):
+                    continue  # handled by the Einsatzmittelvorschlag above
+                if item.kind == "station":
                     station = await self.s.get(Station, item.station_id)
                     if station is not None and station.is_active:
                         if all(s.id != station.id for s, _ in stations):
@@ -541,6 +435,8 @@ class AlarmService:
                     "station": v.station.name,
                     "status_code": v.status_code,
                     "distance_km": km,
+                    "travel_seconds": comp.travel.get(v.id, (None, None))[0],
+                    "travel_source": comp.travel.get(v.id, (None, None))[1],
                     "reason": reason,
                     "assigned": assigned,
                 }

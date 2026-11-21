@@ -86,7 +86,7 @@ MODULES: tuple[ModuleStatus, ...] = (
         name="Alarmierung (AAO, Vorschau, Bestätigung, Nachalarmierung, Protokoll)",
         phase=4,
         status="available",
-        note="Funkalarmierung (POCSAG/TETRA) nicht angebunden; Fahrzeugvorschlag nach Luftlinie bis Phase 5",
+        note="Funkalarmierung (POCSAG/TETRA) nicht angebunden",
     ),
     ModuleStatus(
         key="police_notice",
@@ -94,7 +94,13 @@ MODULES: tuple[ModuleStatus, ...] = (
         phase=4,
         status="available",
     ),
-    ModuleStatus(key="proposal", name="Einsatzmittelvorschlag", phase=5, status="planned"),
+    ModuleStatus(
+        key="proposal",
+        name="Einsatzmittelvorschlag (Bewertung, Begründungen, Übernahme)",
+        phase=5,
+        status="available",
+        note="Fahrzeit geschätzt (Luftlinie × Umwegfaktor) oder per OSRM, falls eingerichtet",
+    ),
     ModuleStatus(key="vehicle_status", name="Fahrzeugstatus und Sprechwünsche", phase=6, status="planned"),
     ModuleStatus(key="map", name="Karte und GPS-Simulation", phase=6, status="planned"),
     ModuleStatus(key="voice", name="Sprach- und Telefoniesimulation", phase=7, status="planned"),
