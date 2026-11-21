@@ -65,8 +65,9 @@ export class ApiClient {
   async get<T>(path: string, query?: Record<string, string | number | boolean | undefined | null>): Promise<T> {
     return this.request<T>('GET', withQuery(path, query));
   }
-  post<T>(path: string, body?: unknown): Promise<T> {
-    return this.request<T>('POST', path, body);
+  /** `headers`: additional request headers, e.g. `Idempotency-Key` for alarms. */
+  post<T>(path: string, body?: unknown, headers?: Record<string, string>): Promise<T> {
+    return this.request<T>('POST', path, body, true, headers);
   }
   put<T>(path: string, body?: unknown): Promise<T> {
     return this.request<T>('PUT', path, body);
@@ -88,12 +89,12 @@ export class ApiClient {
     return (await res.json()) as { status: string; version: string; checks: Record<string, string> };
   }
 
-  async request<T>(method: Method, path: string, body?: unknown, retry = true): Promise<T> {
-    const res = await this.send(method, `${this.baseUrl}/api/v1${path}`, body, true);
+  async request<T>(method: Method, path: string, body?: unknown, retry = true, extraHeaders?: Record<string, string>): Promise<T> {
+    const res = await this.send(method, `${this.baseUrl}/api/v1${path}`, body, true, extraHeaders);
     if (res.status === 401 && retry && this.refreshToken && !path.startsWith('/auth/')) {
       const err = await toApiError(res);
       if (err.details['reason'] === 'token_expired' && (await this.refresh())) {
-        return this.request<T>(method, path, body, false);
+        return this.request<T>(method, path, body, false, extraHeaders);
       }
       this.opts.onAuthLost?.(err.message);
       throw err;
@@ -131,8 +132,8 @@ export class ApiClient {
     return this.refreshing;
   }
 
-  private async send(method: Method, url: string, body: unknown, auth: boolean): Promise<Response> {
-    const headers: Record<string, string> = { Accept: 'application/json' };
+  private async send(method: Method, url: string, body: unknown, auth: boolean, extraHeaders?: Record<string, string>): Promise<Response> {
+    const headers: Record<string, string> = { ...extraHeaders, Accept: 'application/json' };
     const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
     if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
     if (auth && this.accessToken) headers['Authorization'] = `Bearer ${this.accessToken}`;

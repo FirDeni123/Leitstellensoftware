@@ -15,7 +15,7 @@ import { useSession } from '@/state/session';
 import { permittedLayout, type DefaultLayout, type Workstation } from './workstations';
 
 // Bumped when default layouts change substantially (stored layouts are replaced once).
-const LAYOUT_SCHEMA = 4;
+const LAYOUT_SCHEMA = 5;
 const SAVE_DEBOUNCE_MS = 1500;
 
 interface LayoutActions {

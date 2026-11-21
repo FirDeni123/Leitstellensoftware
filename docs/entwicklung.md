@@ -38,10 +38,10 @@ Die Serveradresse wird in der Anmeldemaske unter „Server“ eingestellt.
 ## Tests
 
 ```bash
-cd server && uv run pytest -q                     # 89 Tests, echte PostgreSQL-Testdatenbank ils_test
+cd server && uv run pytest -q                     # 105 Tests, echte PostgreSQL-Testdatenbank ils_test
 cd server && uv run ruff check app tests && uv run ruff format --check app tests
-cd client && npm run typecheck && npm test        # 28 Unit-Tests (vitest)
-cd client && npm run build:web && npm run e2e     # 6 E2E-Tests (Server mit seed-demo, Simulationsbetrieb)
+cd client && npm run typecheck && npm test        # 35 Unit-Tests (vitest)
+cd client && npm run build:web && npm run e2e     # 9 E2E-Tests (Server mit seed-demo, Simulationsbetrieb)
 ```
 
 Server-Tests legen das Schema über die Alembic-Migrationen an. Damit werden die Migrationen
@@ -64,6 +64,10 @@ mitgetestet. Die Testdatenbank wird bei jedem Lauf vollständig neu aufgebaut.
 - **Commits:** kleine, in sich geschlossene Schritte; Tests vor jedem Commit.
 - **Simulation:** jede simulierte Funktion sichtbar kennzeichnen; reale Schnittstellen nur
   über Plugins mit `is_real`.
+- **Neue Schnittstelle (Plugin):** Klasse mit `meta = PluginMeta(...)`, `test()` und
+  `send_alarm()` (siehe `server/app/plugins/builtin/`), registrieren über den Entry-Point
+  `ils_sim.plugins` im eigenen Paket. Simulationsbetrieb, Wiederholversuche, Protokoll und
+  Geheimnisse übernimmt der Kern. Reale Plugins in Tests nur gegen `httpx.MockTransport`.
 
 ## Windows-Installer
 

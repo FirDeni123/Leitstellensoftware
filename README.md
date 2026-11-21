@@ -12,13 +12,13 @@ gleichzeitig arbeitende Disponenten.
 
 ## Stand
 
-**Phase 3 (Einsatzbearbeitung) ist abgeschlossen** (Version 0.3.0): Notrufannahme mit
-simulierten Anrufen, Einsätze mit lückenlosen Nummern, Fahrzeugzuordnung und
-unveränderbarem Einsatzverlauf. Umgesetzt sind Grundsystem
-(Anmeldung, Rechte, Änderungsprotokoll, Echtzeit, Windows-Client mit anpassbaren
-Arbeitsplätzen) sowie die Stammdatenverwaltung: Leitstellen mit Verknüpfungen und
-Zuständigkeitsbereichen, Organisationen, Fahrzeugtypen, Wachen, Fahrzeuge, RICs,
-Alarmierungs- und Funkrufgruppen, Rollen-Editor und Excel/CSV-Import mit Prüfvorschau. Details, Testergebnisse und nächste Schritte:
+**Phase 4 (Alarmierung) ist abgeschlossen** (Version 0.4.0): AAO je Stichwort, Alarmierungsvorschau
+mit Bestätigung, Nachalarmierung, Alarmierungsprotokoll, Polizei-Hinweis (nur Information) und
+ein Plugin-System für Schnittstellen mit strikter Trennung von Simulation und Echtbetrieb.
+Bereits vorhanden: Notrufannahme mit simulierten Anrufen, Einsätze mit lückenlosen Nummern,
+Fahrzeugzuordnung und unveränderbarem Einsatzverlauf; Grundsystem (Anmeldung, Rechte,
+Änderungsprotokoll, Echtzeit, Windows-Client mit anpassbaren Arbeitsplätzen) und
+Stammdatenverwaltung mit Excel/CSV-Import. Details, Testergebnisse und nächste Schritte:
 [docs/STATUS.md](docs/STATUS.md).
 
 ## Aufbau

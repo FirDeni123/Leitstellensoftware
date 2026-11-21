@@ -91,11 +91,41 @@ Alle Stammdaten-Endpunkte haben dieselbe Form: `GET` Liste (`control_center_id`,
 | GET | `/incidents/active-assignments` | `incidents.read` | aktuell gebundene Fahrzeuge |
 | GET/POST | `/simulation/call-scenarios` · `/simulation/calls` | `simulation.control` | simulierte Notrufe (im Echtbetrieb gesperrt) |
 
+### Phase 4 – Alarmierung (umgesetzt)
+
+| Methode | Pfad | Recht | Zweck |
+|---|---|---|---|
+| GET/POST/PATCH/DELETE | `/alarm-rules` | lesen `master_data.read`, ändern `alarm_rules.write` | AAO je Leitstelle/Stichwort/Bereich, Zeilen werden beim PATCH vollständig ersetzt |
+| POST | `/incidents/{id}/alarm-preview` | `incidents.read` | Vorschau aus AAO (`stage`, optional `selection`) – **löst nichts aus** |
+| POST | `/incidents/{id}/alarms` | `alarm.trigger` | Alarmierung; Pflicht: `confirmed: true` und Header `Idempotency-Key` (8–80 Zeichen). Wiederholung mit gleichem Schlüssel → bestehende Alarmierung (HTTP 200), mit anderem Inhalt → 409 |
+| GET | `/incidents/{id}/alarms` · `/alarms` · `/alarms/{id}` | `incidents.read` | Alarmierungsprotokoll mit Zustellstatus je Ziel |
+| GET | `/police-notices` | `incidents.read` | offene (oder alle) Polizei-Hinweise |
+| POST | `/police-notices/{id}/acknowledge` | `incidents.write` | Hinweis zur Kenntnis nehmen (mit Vermerk) – keine Übermittlung |
+| GET | `/plugins` | `interfaces.read` | installierte Plugins mit JSON-Schema der Konfiguration |
+| GET/POST/PATCH/DELETE | `/interfaces` | lesen `interfaces.read`, ändern `interfaces.write` | Schnittstellen; systemweite nur durch Administratoren |
+| POST | `/interfaces/{id}/enabled` | `interfaces.write`; reale zusätzlich `interfaces.activate_real` + Echtbetrieb + Begründung | aktivieren/deaktivieren |
+| POST | `/interfaces/{id}/test` | wie oben | Verbindungstest (reale nur im Echtbetrieb) |
+| GET | `/interfaces/{id}/events` | `interfaces.read` | Ereignisprotokoll |
+
+**Ablauf einer Alarmierung:** Vorschau → Disponent prüft/ändert → Bestätigung → Server
+sperrt den Einsatz, prüft Idempotenz, ordnet neue Fahrzeuge zu, setzt `alarmed_at` und den
+Status „Alarmiert“, schreibt Alarmierung, Ziele, Einsatzverlauf, ggf. Polizei-Hinweis und
+Audit **in einer Transaktion**. Erst danach stellt ein Hintergrundauftrag an die
+Schnittstellen zu (ohne offene Transaktion während Netzwerkzugriffen) und ergänzt das
+Ergebnis im Einsatzverlauf. Nach einem Serverneustart unterbrochene Zustellungen werden als
+fehlgeschlagen markiert und **nicht** automatisch wiederholt.
+
+**Vorschlagslogik (bis Phase 5):** Stufen ≤ gewählter Stufe; bereits im Einsatz befindliche
+Fahrzeuge decken den Bedarf zuerst; freie Fahrzeuge (verfügbar, Status zählt als frei, in
+keinem Einsatz, alarmierbare Organisation) nach Luftlinie. RICs: eigene RICs des Fahrzeugs,
+sonst die der Wache; dazu RICs von Wachen, RIC- und Gruppen-Einträgen. Schnittstellen:
+systemweite und Leitstellen-Schnittstellen bei jeder Alarmierung, Wachen-Schnittstellen bei
+Beteiligung der Wache (erhalten nur die eigenen Fahrzeuge), dazu AAO-Einträge.
+
 ### Geplant
 
 | Phase | Ressourcen |
 |---|---|
-| 4 | `/keywords`, `/alarm-rules`, `/incidents/{id}/alarm-preview`, `/incidents/{id}/alarms` (mit Idempotency-Key), `/police-notices/{id}/acknowledge`, `/interfaces` (+ `/test`, `/events`), `/plugins` |
 | 5 | `/incidents/{id}/proposal` (berechnen, mit Begründungen), `/proposal-settings` |
 | 6 | `/vehicles/{id}/status`, `/talk-requests` (annehmen, zurückstellen, ablehnen), `/simulation/vehicles/{id}/move`, `/simulation/control` (Ausfall, Pause), `/routing/route` |
 | 7 | `/training/scenarios`, `/training/sessions` (Start, Ende, Beobachtung), `/training/sessions/{id}/evaluation`, Audio-WebSocket `/training/sessions/{id}/audio` |
@@ -118,9 +148,10 @@ Schließcodes: `4001` Authentifizierung fehlgeschlagen/abgelaufen · `4002` Rech
 **Event-Themen** (`topic`), umgesetzt: `user.created`, `user.updated`, `me.changed`,
 `role.changed`, `control_center.changed`, `audit.created`, `system.mode_changed`,
 `layout.changed`, `master_data.changed` (`data.collection` nennt die betroffene Sammlung,
-z. B. `vehicles`; zugestellt nur an Benutzer der betroffenen Leitstelle). `call.changed` (Aktion `ringing`, `answered`, `on_hold`, …), `incident.changed`. Geplant: `alarm.*`, `police_notice.created`,
-`vehicle.status`, `vehicle.positions` (gebündelt je Takt), `talk_request.*`,
-`interface.status`, `training.*`.
+z. B. `vehicles`; zugestellt nur an Benutzer der betroffenen Leitstelle). `call.changed` (Aktion `ringing`, `answered`, `on_hold`, …), `incident.changed`, `alarm.changed`,
+`police_notice.changed` (`for_user` = auslösender Disponent, bei ihm erscheint das Popup),
+`interface.changed`. Geplant: `vehicle.status`, `vehicle.positions` (gebündelt je Takt),
+`talk_request.*`, `training.*`.
 
 Events enthalten nur IDs und Kerndaten. Der Client invalidiert damit seinen Cache und lädt
 gezielt nach (`client/src/renderer/src/api/queries.ts`, `TOPIC_INVALIDATIONS`). Ausnahme
@@ -157,26 +188,33 @@ class CallerAgent(Protocol):   async def reply(self, state: ConversationState, u
 class ProposalStrategy(Protocol):  def score(self, ctx: ProposalContext, vehicle: Candidate) -> ScoredCandidate: ...
 ```
 
-## 5. Plugin-System für Schnittstellen (Phase 4)
+## 5. Plugin-System für Schnittstellen (umgesetzt in Phase 4)
 
-- Plugins sind Python-Pakete mit Entry-Point `ils_sim.plugins`. Das Kernsystem lädt sie beim
-  Start, ein Umbau des Kerns ist nicht nötig.
-- Jedes Plugin liefert **Metadaten** (`key`, Name, Version, `is_real`, unterstützte Scopes),
-  ein **JSON-Schema seiner Konfiguration** (daraus erzeugt der Client das
-  Administrationsformular), `test_connection()` und die Implementierung eines oder mehrerer
-  Protokolle (z. B. `AlarmGateway`).
-- **Geheimnisse** (API-Schlüssel) werden getrennt von der Konfiguration verschlüsselt
-  gespeichert (`interfaces.secret_encrypted`, Fernet). Die API gibt sie nie im Klartext
-  zurück, nur maskiert (`••••1234`).
-- **Laufzeit:** Ein Supervisor je Schnittstelle übernimmt Statusüberwachung (`ok`,
-  `degraded`, `error`), automatische Wiederverbindung mit Backoff und Ereignisprotokoll
-  (`interface_events`). Statusänderungen gehen als Event an die Clients.
-- **Sicherheitsregeln** (im Kern erzwungen, nicht im Plugin):
+- **Vertrag** (`server/app/plugins/base.py`): `PluginMeta` (`key`, Name, Beschreibung,
+  `is_real`, Scopes, JSON-Schema der Konfiguration, Bezeichnung des Schlüssels) sowie
+  `test(config, secret)` und `send_alarm(config, secret, message)` → `DeliveryResult`.
+  Die Nachricht (`AlarmMessage`) enthält Einsatznummer, Stichwort, Ort, Koordinaten,
+  Fahrzeuge, Wachen, RICs und den Betriebsmodus.
+- **Registrierung:** eingebaute Plugins plus Python-Pakete mit Entry-Point
+  `ils_sim.plugins` (beim Start geladen; ein defektes Fremd-Plugin stoppt den Server nicht).
+- **Eingebaut:** `simulation_receiver` (Simulations-Empfänger, `is_real = false`) und
+  `webhook` (HTTPS-POST mit JSON und optionalem Token, `is_real = true`).
+- **Konfiguration:** wird gegen das JSON-Schema des Plugins geprüft (`jsonschema`); der
+  Client erzeugt daraus das Formular. **Geheimnisse** werden getrennt und verschlüsselt
+  gespeichert (Fernet, Schlüssel außerhalb der Datenbank), die API liefert nur `••••1234`.
+- **Sicherheitsregeln (im Kern erzwungen, nie im Plugin):**
   1. Neue Schnittstellen sind **deaktiviert**.
-  2. Plugins mit `is_real = true` lassen sich nur aktivieren, wenn der Benutzer
-     `interfaces.activate_real` hat **und** das System im Betriebsmodus „Echtbetrieb“ läuft.
-  3. Im Simulationsmodus leitet der Kern jeden Aufruf an ein reales Plugin auf das
-     Simulations-Gateway um und protokolliert das, auch wenn die Schnittstelle aktiviert ist.
-- **Beispiel-Plugins:** Simulations-Gateway (immer vorhanden); Zusatzalarmierung über eine
-  externe Alarmierungs-API (z. B. Feuersoftware Connect); GPS-Feed; Kartendienst;
-  Fahrzeugdatenbank-Import.
+  2. Reale Plugins: Aktivieren und Testen nur im **Echtbetrieb**, mit
+     `interfaces.activate_real` und Begründung (Audit). Ändern einer aktiven realen
+     Schnittstelle erfordert ebenfalls `interfaces.activate_real`.
+  3. Beim Wechsel in den Simulationsbetrieb werden alle realen Schnittstellen automatisch
+     deaktiviert.
+  4. Unmittelbar vor jedem Plugin-Aufruf prüft der Kern erneut den Betriebsmodus: im
+     Simulationsbetrieb wird ein reales Plugin **nie** aufgerufen, sondern die Zustellung
+     umgeleitet und protokolliert (Test: `test_m4_real_plugin_is_never_called_in_simulation_mode`).
+  5. Zeitlimit je Versuch, drei Versuche mit Wartezeit, Status `ok`/`error` und
+     Ereignisprotokoll je Schnittstelle; Plugin-Fehler brechen nie die Alarmierung ab.
+- **Nicht umgesetzt:** Anbindung einer konkreten Feuerwehrsoftware (z. B. Feuersoftware
+  Connect), Funkalarmierung (POCSAG/TETRA), GPS-Feed. Sie folgen als eigene Plugins, sobald
+  Schnittstellendokumentation und ein Testzugang vorliegen.
+

@@ -354,6 +354,8 @@ export interface Keyword extends KeywordRef, Versioned {
   default_priority: number;
   description: string | null;
   is_active: boolean;
+  police_notice: boolean;
+  police_notice_text: string | null;
 }
 
 export interface CallNote {
@@ -456,4 +458,169 @@ export interface CallScenario {
   key: string;
   title: string;
   expected_keyword: string;
+}
+
+// ---------------------------------------------------------------------------- Phase 4: alarming
+export type RuleItemKind = 'vehicle_type' | 'vehicle' | 'station' | 'ric' | 'alarm_group' | 'interface';
+
+export interface AlarmRuleItem {
+  id?: number;
+  stage: number;
+  kind: RuleItemKind;
+  count: number;
+  target_id: Uuid;
+  target_label?: string;
+  note: string | null;
+}
+
+export interface AlarmRule extends Versioned {
+  control_center_id: Uuid;
+  keyword: KeywordRef;
+  area: { id: Uuid; name: string } | null;
+  name: string | null;
+  is_active: boolean;
+  items: Required<AlarmRuleItem>[];
+  max_stage: number;
+}
+
+export interface AlarmSelection {
+  vehicle_ids: Uuid[];
+  station_ids: Uuid[];
+  ric_ids: Uuid[];
+  interface_ids: Uuid[];
+}
+
+export interface PreviewTarget {
+  id: Uuid;
+  label: string;
+  reason: string;
+}
+
+export interface AlarmPreview {
+  incident_id: Uuid;
+  incident_number: string;
+  incident_version: number;
+  keyword: KeywordRef | null;
+  rule: { id: Uuid; name: string | null; area: string | null } | null;
+  stage: number | null;
+  max_stage: number;
+  next_kind: 'initial' | 'follow_up';
+  mode: OperationMode;
+  vehicles: {
+    id: Uuid; call_sign: string; vehicle_type: string; station_id: Uuid; station: string; status_code: number;
+    distance_km: number | null; reason: string; assigned: boolean;
+  }[];
+  stations: PreviewTarget[];
+  rics: PreviewTarget[];
+  interfaces: { id: Uuid; name: string; plugin_name: string; is_real: boolean; effect: 'deliver' | 'simulate' | 'redirect' | 'skip'; reason: string }[];
+  already_alarmed: string[];
+  police_notice: string | null;
+  warnings: string[];
+  selection: AlarmSelection;
+}
+
+export type DeliveryStatus = 'simulated' | 'sent' | 'failed' | 'skipped' | 'not_delivered' | 'pending';
+
+export interface AlarmTarget {
+  id: number;
+  target_type: 'vehicle' | 'station' | 'ric' | 'interface';
+  target_id: string;
+  label: string;
+  reason: string | null;
+  delivery_status: DeliveryStatus;
+  detail: string | null;
+  delivered_at: string | null;
+}
+
+export interface PoliceNotice {
+  id: Uuid;
+  incident_id: Uuid;
+  incident_number: string;
+  control_center_id: Uuid;
+  keyword_code: string;
+  text: string;
+  created_at: string;
+  acknowledged_at: string | null;
+  acknowledged_by_name: string | null;
+  note: string | null;
+}
+
+export interface Alarm {
+  id: Uuid;
+  incident_id: Uuid;
+  incident_number: string;
+  control_center_id: Uuid;
+  kind: 'initial' | 'follow_up' | 'manual';
+  stage: number | null;
+  mode: OperationMode;
+  status: 'pending' | 'completed' | 'partial';
+  note: string | null;
+  triggered_by_name: string;
+  created_at: string;
+  targets: AlarmTarget[];
+  replayed: boolean;
+  police_notice: PoliceNotice | null;
+}
+
+/** Subset of JSON Schema used by plugin configuration forms. */
+export interface JsonSchemaProperty {
+  type?: 'string' | 'integer' | 'number' | 'boolean';
+  title?: string;
+  description?: string;
+  enum?: (string | number)[];
+  default?: unknown;
+  minimum?: number;
+  maximum?: number;
+  maxLength?: number;
+  pattern?: string;
+  format?: string;
+}
+
+export interface JsonObjectSchema {
+  type: 'object';
+  required?: string[];
+  properties?: Record<string, JsonSchemaProperty>;
+  additionalProperties?: boolean;
+}
+
+export type InterfaceScope = 'global' | 'control_center' | 'station';
+
+export interface PluginInfo {
+  key: string;
+  name: string;
+  description: string;
+  is_real: boolean;
+  scopes: InterfaceScope[];
+  config_schema: JsonObjectSchema;
+  secret_label: string | null;
+  secret_required: boolean;
+  capabilities: string[];
+}
+
+export interface InterfaceItem extends Versioned {
+  plugin_key: string;
+  plugin_name: string;
+  is_real: boolean;
+  name: string;
+  scope: InterfaceScope;
+  control_center_id: Uuid | null;
+  station_id: Uuid | null;
+  station_name: string | null;
+  enabled: boolean;
+  effective: boolean;
+  config: Record<string, unknown>;
+  has_secret: boolean;
+  secret_hint: string | null;
+  status: 'unknown' | 'ok' | 'error';
+  last_ok_at: string | null;
+  last_error: string | null;
+  last_checked_at: string | null;
+}
+
+export interface InterfaceEventItem {
+  id: number;
+  ts: string;
+  level: 'info' | 'warning' | 'error';
+  kind: string;
+  message: string;
 }

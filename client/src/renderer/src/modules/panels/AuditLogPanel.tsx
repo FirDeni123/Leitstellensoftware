@@ -22,6 +22,13 @@ const ENTITY_LABEL: Record<string, string> = {
   control_center_area: 'Zuständigkeitsbereich',
   control_center_link: 'Leitstellen-Verknüpfung',
   import_job: 'Datenimport',
+  keyword: 'Einsatzstichwort',
+  emergency_call: 'Notruf',
+  incident: 'Einsatz',
+  alarm_rule: 'AAO',
+  alarm: 'Alarmierung',
+  interface: 'Schnittstelle',
+  police_notice: 'Polizei-Hinweis',
 };
 
 const ACTION_LABEL: Record<string, string> = {
@@ -29,6 +36,9 @@ const ACTION_LABEL: Record<string, string> = {
   password_reset: 'Passwort zurückgesetzt', password_change: 'Passwort geändert', unlock: 'Entsperrt',
   mode_change: 'Moduswechsel', sync: 'Synchronisiert', seed: 'Demodaten angelegt',
   upload: 'Datei hochgeladen', commit: 'Import übernommen', discard: 'Import verworfen',
+  status: 'Status geändert', assign: 'Fahrzeuge zugeordnet', release: 'Fahrzeug freigegeben', alarm: 'Alarmierung',
+  receive: 'Notruf eingegangen', answer: 'Notruf angenommen', hold: 'Gehalten', takeover: 'Übernommen', end: 'Beendet',
+  link: 'Zugeordnet', acknowledge: 'Bestätigt', enable: 'Aktiviert', disable: 'Deaktiviert', test: 'Getestet', recover: 'Wiederhergestellt',
 };
 
 function formatValue(v: unknown): string {

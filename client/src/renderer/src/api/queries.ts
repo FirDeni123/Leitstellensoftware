@@ -6,8 +6,8 @@ import { QueryClient, useQuery } from '@tanstack/react-query';
 import { onRealtimeEvent, onResync, useSession } from '@/state/session';
 import { ApiClient, ApiError } from './http';
 import type {
-  ActiveAssignment, AuditPage, Call, ControlCenter, Incident, IncidentEvent, IncidentSummary, LoginEvent, Page, Permission,
-  Role, SystemInfo, User,
+  ActiveAssignment, Alarm, AlarmRule, AuditPage, Call, ControlCenter, Incident, IncidentEvent, IncidentSummary, InterfaceEventItem,
+  InterfaceItem, LoginEvent, Page, Permission, PluginInfo, PoliceNotice, Role, SystemInfo, User,
 } from './types';
 
 export const queryClient = new QueryClient({
@@ -28,9 +28,12 @@ export const TOPIC_INVALIDATIONS: Record<string, readonly (readonly string[])[]>
   'role.changed': [['roles'], ['users']],
   'control_center.changed': [['control-centers']],
   'audit.created': [['audit'], ['import-jobs']],
-  'system.mode_changed': [['system-info']],
+  'system.mode_changed': [['system-info'], ['interfaces'], ['operation-mode']],
   'incident.changed': [['incidents'], ['incident-events'], ['active-assignments']],
   'call.changed': [['calls'], ['incidents']],
+  'alarm.changed': [['alarms'], ['incident-events'], ['incidents']],
+  'police_notice.changed': [['police-notices'], ['alarms'], ['incident-events']],
+  'interface.changed': [['interfaces'], ['interface-events']],
 };
 
 export function keysForTopic(topic: string): readonly (readonly string[])[] {
@@ -148,5 +151,59 @@ export function useLoginEvents(enabled: boolean) {
     queryKey: ['login-events'],
     queryFn: () => api.get<LoginEvent[]>('/login-events', { limit: 200 }),
     enabled,
+  });
+}
+
+// ---------------------------------------------------------------------------- Phase 4: alarming
+export function useAlarms(controlCenterId: string | undefined, incidentId?: string) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['alarms', controlCenterId, incidentId ?? null],
+    queryFn: () => (incidentId
+      ? api.get<Alarm[]>(`/incidents/${incidentId}/alarms`)
+      : api.get<Alarm[]>('/alarms', { control_center_id: controlCenterId, limit: 200 })),
+    enabled: !!controlCenterId || !!incidentId,
+    staleTime: 5_000,
+  });
+}
+
+export function usePoliceNotices(controlCenterId: string | undefined, onlyOpen = true) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['police-notices', controlCenterId, onlyOpen],
+    queryFn: () => api.get<PoliceNotice[]>('/police-notices', { control_center_id: controlCenterId, only_open: onlyOpen }),
+    enabled: !!controlCenterId,
+    staleTime: 5_000,
+  });
+}
+
+export function useAlarmRules(controlCenterId: string | undefined) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['alarm-rules', controlCenterId],
+    queryFn: () => api.get<AlarmRule[]>('/alarm-rules', { control_center_id: controlCenterId }),
+    enabled: !!controlCenterId,
+  });
+}
+
+export function usePlugins() {
+  const api = useApi();
+  return useQuery({ queryKey: ['plugins'], queryFn: () => api.get<PluginInfo[]>('/plugins'), staleTime: Infinity });
+}
+
+export function useInterfaces(controlCenterId: string | undefined) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['interfaces', controlCenterId],
+    queryFn: () => api.get<InterfaceItem[]>('/interfaces', { control_center_id: controlCenterId }),
+  });
+}
+
+export function useInterfaceEvents(id: string | null) {
+  const api = useApi();
+  return useQuery({
+    queryKey: ['interface-events', id],
+    queryFn: () => api.get<InterfaceEventItem[]>(`/interfaces/${id}/events`, { limit: 100 }),
+    enabled: !!id,
   });
 }

@@ -2,7 +2,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState, type ReactNode } from 'react';
 import { ApiError, describeError } from '@/api/http';
-import { useActiveAssignments, useIncident, useIncidentEvents, useIncidents, useList } from '@/api/queries';
+import { useActiveAssignments, useAlarms, useIncident, useIncidentEvents, useIncidents, useList, usePoliceNotices } from '@/api/queries';
 import type { Incident, IncidentStatus, IncidentType, Keyword, Vehicle } from '@/api/types';
 import { EmptyState, ErrorAlert, Field, fmtDateTime, fmtTime, Modal } from '@/components/common';
 import { MultiSelect } from '@/components/MultiSelect';
@@ -10,6 +10,9 @@ import { EditNotices, useEditBase } from '@/components/useEditBase';
 import { sysmsg } from '@/state/messages';
 import { hasPermission, useSession } from '@/state/session';
 import { useActiveControlCenter } from '@/state/workContext';
+import { AlarmDialog } from '../alarming/AlarmDialog';
+import { AlarmProtocol } from '../alarming/AlarmProtocol';
+import { usePoliceNoticeQueue } from '../alarming/policeNotices';
 import { ControlCenterBadge } from '../crud/CrudPanel';
 import { parseNumber } from '../crud/fields';
 import { elapsed, INCIDENT_STATUS, INCIDENT_TYPE, PRIORITY, STATUS_BY_KEY, useNow } from './labels';
@@ -166,8 +169,9 @@ function IncidentView({ incident }: { incident: Incident }): ReactNode {
         ))}
       </div>
       <div className="muted" style={{ fontSize: 'var(--fs-xs)', marginTop: 4 }}>
-        „Alarmiert“, „Anfahrt“ und „Am Einsatzort“ werden ab Phase 4/6 automatisch aus Alarmierung und Fahrzeugstatus gesetzt.
+        „Alarmiert“ setzt die Alarmierung; „Anfahrt“ und „Am Einsatzort“ werden ab Phase 6 aus dem Fahrzeugstatus übernommen.
       </div>
+      <PoliceNoticeBanner incident={incident} />
 
       <div className="section-title">Einsatzdaten</div>
       <div className="form-grid">
@@ -206,6 +210,7 @@ function IncidentView({ incident }: { incident: Incident }): ReactNode {
       )}
 
       <VehiclesSection incident={incident} />
+      <AlarmSection incident={incident} />
 
       {incident.calls.length > 0 && (
         <>
@@ -391,5 +396,42 @@ function CreateIncidentDialog({ ccId, onClose, onCreated }: { ccId: string; onCl
       <Field label="Beschreibung"><textarea className="input" style={{ height: 60, padding: 8 }} value={description} onChange={(e) => setDescription(e.target.value)} /></Field>
       <ErrorAlert error={error} />
     </Modal>
+  );
+}
+
+function AlarmSection({ incident }: { incident: Incident }): ReactNode {
+  const me = useSession((s) => s.me)!;
+  const alarms = useAlarms(undefined, incident.id);
+  const [open, setOpen] = useState(false);
+  const canAlarm = hasPermission(me, 'alarm.trigger') && !['finished', 'closed'].includes(incident.status);
+  const count = alarms.data?.length ?? 0;
+  return (
+    <>
+      <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span>Alarmierungen ({count})</span>
+        {canAlarm && (
+          <button className="btn danger sm" style={{ marginLeft: 'auto' }} onClick={() => setOpen(true)} title="Vorschau öffnen – ausgelöst wird erst nach Bestätigung">
+            {count ? 'Nachalarmieren …' : 'Alarmieren …'}
+          </button>
+        )}
+      </div>
+      <ErrorAlert error={alarms.error} />
+      <AlarmProtocol alarms={alarms.data ?? []} />
+      {open && <AlarmDialog incident={incident} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
+function PoliceNoticeBanner({ incident }: { incident: Incident }): ReactNode {
+  const notices = usePoliceNotices(incident.control_center_id);
+  const show = usePoliceNoticeQueue((s) => s.show);
+  const open = (notices.data ?? []).filter((n) => n.incident_id === incident.id);
+  if (open.length === 0) return null;
+  return (
+    <div className="alert warning" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+      <span className="badge police-badge">Polizei informieren</span>
+      <span>{open[0]!.text} – noch nicht bestätigt (keine Übermittlung durch das System).</span>
+      <button className="btn sm" style={{ marginLeft: 'auto' }} onClick={() => show(open[0]!)}>Bestätigen …</button>
+    </div>
   );
 }

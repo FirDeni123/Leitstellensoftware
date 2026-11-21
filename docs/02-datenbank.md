@@ -35,7 +35,7 @@ Fremdschlüssel**. Ein `ON DELETE SET NULL` wäre selbst eine Änderung am Proto
 das Löschen referenzierter Datensätze blockieren. Der Name des Handelnden wird deshalb
 zusätzlich als Text gespeichert.
 
-## 2. Geplante Tabellen (Phasen 2–7)
+## 2. Tabellen je Phase (Phasen 2–4 umgesetzt, 5–7 geplant)
 
 ### Phase 2 – Stammdaten (✅ umgesetzt, Migration `0002`)
 
@@ -86,18 +86,21 @@ Simulation das simulierte Gesprächsprotokoll (`sim_transcript`).
 | `incident_vehicles` | Fahrzeugzuordnung mit Zeitstempeln: `assigned_at`, `alarmed_at`, `s3_at`, `s4_at`, `released_at`, `released_reason` |
 | `incident_stations` | Beteiligte Wachen |
 
-### Phase 4 – Alarmierung und Schnittstellen
+### Phase 4 – Alarmierung und Schnittstellen (umgesetzt, Migration `0004`)
 
 | Tabelle | Zweck / Spalten |
 |---|---|
-| `keywords` | Einsatzstichworte. `code` (B1, B2, H1, RD1 …), `name`, `category`, `default_priority`, `police_notice` (bool), `police_notice_text`, `requirements` (JSONB) |
-| `alarm_rules` | Alarm- und Ausrückeordnung (AAO) je Stichwort und Leitstelle/Bereich. `stage` (Schleife 1, 2, …), `is_additional` |
-| `alarm_rule_items` | Regelinhalt: Fahrzeugtyp + Anzahl, bestimmte Wache, bestimmte RIC/Alarmgruppe, Zusatzalarmierung (Plugin) |
-| `alarms` | Ausgelöste Alarmierungen. `incident_id`, `triggered_by`, `mode` (`sim`/`real`), `idempotency_key` (eindeutig), `status` |
-| `alarm_targets` | Ziele je Alarmierung (RIC, Fahrzeug, Wache, Plugin) mit Zustellstatus |
-| `police_notices` | Polizei-Hinweise: angezeigt, bestätigt von/um, Notiz. **Keine** Zustellung an die Polizei |
-| `interfaces` | Konfigurierte Schnittstellen. `plugin_key`, `scope` (`global`/`control_center`/`station`), `scope_id`, `name`, `enabled` (Standard false), `is_real`, `config` (JSONB, ohne Geheimnisse), `secret_encrypted` (Fernet), `status`, `last_ok_at`, `last_error` |
-| `interface_events` | Ereignis- und Fehlerprotokoll je Schnittstelle |
+| `keywords` (erweitert) | `police_notice` (bool), `police_notice_text`. Standard: H2, H-KLEMM, B-MIG, W1, ABC2, MANV mit Hinweistext (einmalig gesetzt, danach frei änderbar) |
+| `alarm_rules` | AAO je Leitstelle und Stichwort, optional je Zuständigkeitsbereich (`area_id`). Eindeutig je (Leitstelle, Stichwort, Bereich) über einen Ausdrucks-Index. `name`, `is_active`, `version` |
+| `alarm_rule_items` | Zeilen der AAO: `stage` (1–9, 1 = Erstalarm), `position`, `kind` (`vehicle_type`/`vehicle`/`station`/`ric`/`alarm_group`/`interface`), `count` (1–20, für Fahrzeugtypen), genau eine passende Ziel-Spalte (Check-Constraint `target_matches_kind`), `note` |
+| `alarms` | Bestätigte Alarmierungen. `kind` (`initial`/`follow_up`), `stage`, `mode` (Betriebsmodus zum Zeitpunkt), `status` (`pending`/`completed`/`partial`), `idempotency_key` + `request_hash` (eindeutig je Einsatz), `triggered_by(_name)`, `note` |
+| `alarm_targets` | Ziele je Alarmierung: `target_type` (`vehicle`/`station`/`ric`/`interface`), `label`, `reason` (warum im Vorschlag), `delivery_status` (`simulated`/`sent`/`failed`/`skipped`/`not_delivered`/`pending`), `detail`, `delivered_at` |
+| `police_notices` | Polizei-Hinweis je Einsatz und Stichwort: Text, angezeigt am, bestätigt von/um, Vermerk. **Keine** Zustellung an die Polizei |
+| `interfaces` | Plugin-Instanzen: `plugin_key`, `scope` (`global`/`control_center`/`station`, Check-Constraint), `enabled` (Standard **false**), `config` (JSONB, ohne Geheimnisse), `secret_encrypted` (Fernet), `secret_hint` (`••••1234`), `status`, `last_ok_at`, `last_error`, `last_checked_at`, `version`. Ob ein Plugin „real“ ist, steht im Plugin-Code (`meta.is_real`), nicht in der Datenbank |
+| `interface_events` | Ereignis- und Fehlerprotokoll je Schnittstelle (`kind`: `config`, `test`, `delivery`, `redirected`) |
+
+Statusänderungen einer Schnittstelle (ok/Fehler) erhöhen die `version` nicht – sie würden
+sonst Bearbeitungskonflikte bei Administratoren auslösen.
 
 ### Phase 5 – Einsatzmittelvorschlag
 

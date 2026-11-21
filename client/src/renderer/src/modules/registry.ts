@@ -42,6 +42,10 @@ export const PANELS: readonly PanelDefinition[] = [
   { id: 'emergency-calls', title: 'Neue Notrufe', permission: 'calls.handle', phase: 3, implemented: true },
   { id: 'active-calls', title: 'Laufende Telefonate', permission: 'calls.handle', phase: 3, implemented: true },
   { id: 'incidents', title: 'Aktuelle Einsätze', permission: 'incidents.read', phase: 3, implemented: true },
+  // ---- implemented in phase 4 (alarming) -------------------------------------------------
+  { id: 'alarms', title: 'Alarmierungsübersicht', permission: 'incidents.read', phase: 4, implemented: true },
+  { id: 'alarm-rules', title: 'Alarmierungsregeln (AAO)', permission: 'master_data.read', phase: 4, implemented: true },
+  { id: 'interfaces', title: 'Schnittstellen', permission: 'interfaces.read', phase: 4, implemented: true },
   // ---- planned modules (transparently marked) -------------------------------------------
   {
     id: 'talk-requests', title: 'Sprechwünsche', permission: 'radio.handle', phase: 6, implemented: false,
@@ -54,10 +58,6 @@ export const PANELS: readonly PanelDefinition[] = [
   {
     id: 'status-board', title: 'Statusübersicht', permission: 'incidents.read', phase: 6, implemented: false,
     scope: ['FMS-Status 1–6 je Wache (Statustableau)', 'Statushistorie'],
-  },
-  {
-    id: 'alarms', title: 'Alarmierungsübersicht', permission: 'alarm.trigger', phase: 4, implemented: false,
-    scope: ['Alarmierungsvorschau und -bestätigung', 'Alarmierungsprotokoll', 'Polizei-Hinweise (keine Alarmierung)'],
   },
   {
     id: 'map', title: 'Karte', phase: 6, implemented: false,

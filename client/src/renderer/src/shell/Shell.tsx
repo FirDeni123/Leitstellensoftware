@@ -4,6 +4,7 @@ import { useSystemInfo } from '@/api/queries';
 import { ChangePasswordForm } from '@/auth/ChangePasswordForm';
 import { Modal } from '@/components/common';
 import { DockArea } from '@/layout/DockArea';
+import { PoliceNoticePopup } from '@/modules/alarming/PoliceNoticePopup';
 import { installCallAlert } from '@/modules/operations/callAlert';
 import { availableWorkstations } from '@/layout/workstations';
 import { sysmsg } from '@/state/messages';
@@ -69,6 +70,7 @@ export function Shell(): ReactNode {
         <div className="empty-state">Ihrem Konto ist kein Arbeitsplatz zugeordnet. Bitte an die Administration wenden.</div>
       )}
       <StatusBar />
+      <PoliceNoticePopup />
       {changePassword && (
         <Modal title="Passwort ändern" onClose={() => setChangePassword(false)}>
           <ChangePasswordForm

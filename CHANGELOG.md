@@ -1,5 +1,38 @@
 # Änderungsprotokoll
 
+## 0.4.0 – 21.11.2026 – Phase 4: Alarmierung
+
+### Hinzugefügt
+- Alarm- und Ausrückeordnung (AAO) je Leitstelle und Stichwort, optional je
+  Zuständigkeitsbereich, mit Stufen und Einträgen für Fahrzeugtypen (mit Anzahl), Fahrzeuge,
+  Wachen, RICs, Alarmierungsgruppen und Schnittstellen; Editor „Alarmierungsregeln (AAO)“.
+- Alarmierungsvorschau im Einsatz („Alarmieren …“): Vorschlag aus der AAO, Fahrzeuge
+  ab-/zuwählen, Stufe wählen, ausgelöste RICs und Schnittstellen mit ihrer Wirkung,
+  Warnungen bei fehlenden Einsatzmitteln.
+- Alarmierung erst nach Bestätigung, Erst- und Nachalarmierung, Schutz vor
+  Doppelalarmierung (Idempotency-Key), Status „Alarmiert“, Alarmierungsprotokoll je Einsatz
+  und Fenster „Alarmierungsübersicht“.
+- Hinweis „Polizei informieren“ als bestätigungspflichtiges Informationsfenster mit Vermerk
+  und Dokumentation im Einsatzverlauf; Stichwort-Felder dafür; Standard für sechs
+  Stichworte. Die Polizei wird nie durch das System alarmiert.
+- Plugin-System für Schnittstellen mit Simulations-Empfänger und Webhook (real);
+  Fenster „Schnittstellen“ mit aus JSON-Schema erzeugtem Formular, verschlüsselten
+  Schlüsseln, Verbindungstest und Ereignisprotokoll.
+- Demo-Daten: 13 AAOs und ein aktiver Simulations-Empfänger.
+
+### Sicherheit
+- Reale Schnittstellen: nur im Echtbetrieb, nur mit `interfaces.activate_real` und
+  Begründung aktivierbar; automatische Deaktivierung beim Wechsel in den Simulationsbetrieb;
+  der Kern ruft reale Plugins im Simulationsbetrieb nie auf.
+
+### Geändert
+- Standardlayouts (Schema 5): neue Fenster in Verwaltung und Administrator-Arbeitsplatz.
+- Ereignisprotokoll übersetzt nun auch Einsatz-, Notruf- und Alarmierungsaktionen.
+
+### Behoben (während der Entwicklung gefunden)
+- Polizei-Hinweise wurden bei einer Neuinstallation nicht gesetzt.
+- Doppelte AAO lieferte HTTP 500 statt 409.
+
 ## 0.3.0 – 21.11.2026 – Phase 3: Einsatzbearbeitung
 
 ### Hinzugefügt

@@ -14,6 +14,8 @@ export function MultiSelect(props: {
   disabled?: boolean;
   placeholder?: string;
   label?: string;
+  /** Text shown without a selection; `null` hides it (e.g. pure "add" pickers). */
+  emptyText?: string | null;
 }): ReactNode {
   const { options, value, onChange, disabled } = props;
   const [filter, setFilter] = useState('');
@@ -28,7 +30,7 @@ export function MultiSelect(props: {
 
   return (
     <div className="multiselect">
-      <div className="chips">
+      {(value.length > 0 || props.emptyText !== null) && <div className="chips">
         {value.map((v) => (
           <span key={v} className="chip on">
             {byValue.get(v)?.label ?? v}
@@ -39,8 +41,8 @@ export function MultiSelect(props: {
             )}
           </span>
         ))}
-        {value.length === 0 && <span className="muted" style={{ fontSize: 'var(--fs-sm)' }}>keine</span>}
-      </div>
+        {value.length === 0 && <span className="muted" style={{ fontSize: 'var(--fs-sm)' }}>{props.emptyText ?? 'keine'}</span>}
+      </div>}
       {!disabled && (
         <div className="multiselect-add">
           <input

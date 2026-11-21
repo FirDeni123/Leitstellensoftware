@@ -278,6 +278,7 @@ export const KEYWORDS: EntityConfig<Keyword> = {
     { header: 'Bezeichnung', render: (k) => k.name },
     { header: 'Einsatzart', render: (k) => TYPE_OPTIONS.find((o) => o.value === k.category)?.label ?? k.category },
     { header: 'Prio', width: 50, className: 'tabular', render: (k) => k.default_priority },
+    { header: 'Polizei', width: 64, render: (k) => (k.police_notice ? <span className="badge police-badge" title={k.police_notice_text ?? ''}>Hinweis</span> : '') },
   ],
   fields: [
     { key: 'code', label: 'Kürzel', type: 'text', required: true, createOnly: true, placeholder: 'B2', transform: (v) => v.toUpperCase() },
@@ -286,6 +287,13 @@ export const KEYWORDS: EntityConfig<Keyword> = {
     { key: 'default_priority', label: 'Standardpriorität (1 = höchste)', type: 'number', min: 1, max: 3, defaultValue: '2', required: true },
     { key: 'is_active', label: 'Aktiv', type: 'checkbox', defaultValue: true },
     { key: 'description', label: 'Beschreibung', type: 'textarea' },
+    { key: 'police_notice', label: 'Hinweis „Polizei informieren“ anzeigen (keine Alarmierung)', type: 'checkbox', defaultValue: false },
+    { key: 'police_notice_text', label: 'Text des Polizei-Hinweises', type: 'textarea', placeholder: 'z. B. Verkehrsunfall – Polizei informieren (Unfallaufnahme)' },
   ],
-  details: () => <div className="muted" style={{ fontSize: 'var(--fs-xs)' }}>Alarmierungsregeln (AAO), RIC-Zuordnung und Polizei-Hinweis je Stichwort folgen mit Phase 4.</div>,
+  details: () => (
+    <div className="muted" style={{ fontSize: 'var(--fs-xs)' }}>
+      Die Alarmierungsregeln (AAO) je Leitstelle pflegen Sie im Fenster „Alarmierungsregeln (AAO)“.
+      Der Polizei-Hinweis ist ein bestätigungspflichtiges Informationsfenster – das System alarmiert die Polizei nie.
+    </div>
+  ),
 };

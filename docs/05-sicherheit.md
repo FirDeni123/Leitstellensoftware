@@ -14,10 +14,10 @@ Freigabe.
 |---|---|---|
 | System | Betriebsmodus `simulation`/`real` in `system_settings`. Standard und Neuinstallation: **simulation**. Wechsel nur mit `system.mode.change` (nur Administratorrolle), Begründung und Bestätigungswort „ECHTBETRIEB“. Wird protokolliert und an alle Clients gemeldet | ✅ |
 | Oberfläche | Dauerhaftes Banner „SIMULATIONSBETRIEB“ (gelb schraffiert) bzw. „ECHTBETRIEB“ (rot) auf jedem Arbeitsplatz und auf der Anmeldemaske | ✅ |
-| Schnittstelle | Jede Schnittstelle trägt `is_real` und ist bei Anlage **deaktiviert**. Aktivierung realer Schnittstellen nur mit `interfaces.activate_real` und im Echtbetrieb | Phase 4 |
-| Kern | Im Simulationsmodus leitet der Kern Aufrufe realer Plugins auf das Simulations-Gateway um, unabhängig vom Plugin-Code | Phase 4 |
+| Schnittstelle | Jedes Plugin trägt `is_real`; Schnittstellen sind bei Anlage **deaktiviert**. Aktivieren/Testen realer Schnittstellen nur mit `interfaces.activate_real`, im Echtbetrieb und mit Begründung; Wechsel in den Simulationsbetrieb deaktiviert sie automatisch | ✅ |
+| Kern | Vor jedem Plugin-Aufruf prüft der Kern den Betriebsmodus; im Simulationsbetrieb wird ein reales Plugin nie aufgerufen (Umleitung + Protokoll), auch wenn es fälschlich aktiv ist | ✅ (Test) |
 | KI-Training | Der KI-Anrufer ist fest an den Provider `SimulatedTelephony` gebunden. Der Trainingspfad hat keine Code-Verbindung zum SIP-Provider. Ein Test stellt das sicher (Import-Grenze) | Phase 7 |
-| Polizei | Polizei ist eine Organisation mit `alarmable = false`, abgesichert durch einen Datenbank-Check-Constraint (✅). Polizeifahrzeuge können nicht angelegt oder importiert werden (✅). Es gibt keinen Alarmierungspfad, nur ein bestätigungspflichtiges Hinweisfenster (Phase 4) | ✅ / Phase 4 |
+| Polizei | Polizei ist eine Organisation mit `alarmable = false`, abgesichert durch einen Datenbank-Check-Constraint (✅). Polizeifahrzeuge können nicht angelegt oder importiert werden (✅). Polizei-Fahrzeuge und -Wachen werden zusätzlich bei AAO, Vorschau und Alarmierung abgewiesen. Es gibt keinen Alarmierungspfad, nur ein bestätigungspflichtiges Hinweisfenster, dessen Bestätigung im Einsatzverlauf steht | ✅ |
 | Daten | Spalten `source` kennzeichnen simulierte Notrufe und Einsätze („SIM“ in der Oberfläche) | ✅ |
 | Simulierte Anrufe | Erzeugung nur mit `simulation.control` und nur im Simulationsbetrieb (im Echtbetrieb 409) | ✅ |
 
@@ -127,3 +127,17 @@ Lesbarkeitstest, Aufbewahrungsfrist). `restore.sh` stellt in eine neue Datenbank
 und tauscht erst nach Erfolg; der alte Stand bleibt als `ils_before_restore` erhalten. Die
 `.env` (Schlüssel!) ist separat zu sichern. Details:
 [betrieb/ubuntu-server.md](betrieb/ubuntu-server.md).
+
+## Alarmierung (Phase 4)
+
+- **Keine selbstständige Alarmierung:** Der Server alarmiert ausschließlich auf eine
+  ausdrückliche Anfrage mit `confirmed: true`; die Vorschau ist schreibfrei.
+- **Doppelalarmierung verhindert:** `Idempotency-Key` je bestätigtem Dialog, eindeutig je
+  Einsatz in der Datenbank, zusammen mit einer Sperre des Einsatzes (vier parallele
+  Anfragen → genau eine Alarmierung, getestet).
+- **Geheimnisse:** API-Schlüssel nur verschlüsselt (Fernet) in `interfaces.secret_encrypted`;
+  nie in API-Antworten, Audit-Einträgen, Events oder Logs (getestet).
+- **Webhook-Ziele** müssen `https://` sein. Ziel-URLs legen nur berechtigte Administratoren
+  fest; eine Allowlist für Zielhosts ist für Phase 8 vorgesehen.
+- **Abhängigkeit:** `jsonschema` (Prüfung der Plugin-Konfiguration).
+
