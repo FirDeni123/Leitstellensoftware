@@ -7,6 +7,7 @@ from importlib.metadata import entry_points
 
 from app.core.errors import ValidationFailedError
 from app.plugins.base import InterfacePlugin
+from app.plugins.builtin.feuersoftware import FeuersoftwareConnectPlugin
 from app.plugins.builtin.simulation import SimulationReceiverPlugin
 from app.plugins.builtin.webhook import WebhookPlugin
 
@@ -44,3 +45,4 @@ def load_entry_points() -> None:
 
 register(SimulationReceiverPlugin())
 register(WebhookPlugin())
+register(FeuersoftwareConnectPlugin())

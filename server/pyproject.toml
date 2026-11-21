@@ -1,6 +1,6 @@
 [project]
 name = "ils-server"
-version = "0.7.0"
+version = "0.7.1"
 description = "ILS-Sim – zentraler Server (API, Echtzeit, Simulation) für die Leitstellen-Simulation"
 requires-python = ">=3.12"
 dependencies = [

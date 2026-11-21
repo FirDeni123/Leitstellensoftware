@@ -49,6 +49,7 @@ class AlarmMessage:
     vehicles: list[str] = field(default_factory=list)
     stations: list[str] = field(default_factory=list)
     rics: list[str] = field(default_factory=list)
+    kind: str = "initial"  # initial | follow_up | manual
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -61,6 +62,9 @@ class DeliveryResult:
     ok: bool
     detail: str
     external_id: str | None = None
+    # False: repeating the same request cannot succeed (e.g. invalid token, validation error) –
+    # the core then stops retrying instead of burning the receiver's rate limit.
+    retryable: bool = True
 
 
 @runtime_checkable

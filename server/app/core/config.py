@@ -13,7 +13,7 @@ from functools import lru_cache
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-APP_VERSION = "0.7.0"
+APP_VERSION = "0.7.1"
 
 _DEV_JWT_SECRET = "dev-only-insecure-jwt-secret-change-me-0123456789"  # noqa: S105
 # Fernet key used only for development/tests (base64, 32 bytes). Never valid in production.

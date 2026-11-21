@@ -83,6 +83,24 @@ Karte immer angezeigt.
 > worden (kein Docker). Die OSRM-Anbindung des Servers ist gegen einen simulierten Endpunkt
 > getestet.
 
+## Schnittstelle Feuersoftware Connect
+
+Legt je bestätigter Alarmierung einen Einsatz in Feuersoftware Connect an. Voraussetzungen:
+ausgehende HTTPS-Verbindung des Servers zu `connectapi.feuersoftware.com` und ein API-Token
+**auf Standortebene** (Connect-Portal → Schnittstellen → Öffentliche Connect Schnittstelle →
+Aktivieren; Einsätze anlegen darf nur ein Standort-Token).
+
+1. Im Client als Administrator: „Schnittstellen“ → neue Schnittstelle, Plugin „Feuersoftware
+   Connect (real)“, Token als Schlüssel eintragen. Für den ersten Test „Einsatzkräfte
+   alarmieren“ **ausschalten**. Die Schnittstelle ist danach angelegt, aber aus.
+2. In den Echtbetrieb wechseln, die Schnittstelle mit Begründung einschalten und „Testen“
+   (liest nur, legt nichts an).
+3. Einen deutlich als Test gekennzeichneten Einsatz alarmieren und im Connect-Portal prüfen.
+4. Zurück in den Simulationsbetrieb – die Schnittstelle wird dabei automatisch ausgeschaltet.
+
+Im Echtbetrieb geht **jede** bestätigte Alarmierung an Connect. Rate-Limit von Feuersoftware:
+5 Einsätze pro Minute, 25 pro Stunde.
+
 ## KI-Anrufer und Spracherkennung (Ausbildung)
 
 Der KI-Anrufer ist ausgeschaltet, bis ein Administrator ihn im Fenster „KI-Einstellungen“

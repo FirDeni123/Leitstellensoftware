@@ -67,6 +67,7 @@ def build_message(
         vehicles=[vehicles[t.target_id].call_sign for t in vehicle_targets if t.target_id in vehicles],
         stations=[t.label for t in station_targets],
         rics=[] if station_only else [t.label for t in alarm.targets if t.target_type == "ric"],
+        kind=alarm.kind,
     )
 
 

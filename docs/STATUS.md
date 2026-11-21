@@ -1,13 +1,25 @@
 # Projektstatus
 
-**Stand:** 21.11.2026 · **Version:** 0.7.0 · **Aktuelle Phase:** 7 umgesetzt (M7 mit
+**Stand:** 21.11.2026 · **Version:** 0.7.1 · **Aktuelle Phase:** 7 umgesetzt (M7 mit
 regelbasiertem Anrufer nachgewiesen, Claude-Latenz noch zu messen), nächste: Phase 8
 (Stabilisierung)
 
-**Testergebnis zuletzt:** Server 156/156 ✅ · Client-Unit 57/57 ✅ · E2E 15/15 ✅ (zweimal in Folge) ·
+**Testergebnis zuletzt:** Server 168/168 ✅ · Client-Unit 57/57 ✅ · E2E 15/15 ✅ (zweimal in Folge) ·
 Ruff ✅ · TypeScript ✅ · `alembic check` ✅
 
 **Repository:** https://github.com/FirDeni123/Leitstellensoftware (Branch `main`).
+
+## Nachtrag 0.7.1 – Schnittstelle Feuersoftware Connect
+
+Neues reales Plugin `feuersoftware_connect`: legt je bestätigter Alarmierung einen Einsatz in
+Feuersoftware Connect an (öffentliche Connect-Schnittstelle, offizielle Doku gelesen). Wie jede
+reale Schnittstelle: angelegt deaktiviert, nur im Echtbetrieb durch einen Administrator
+einschaltbar, im Simulationsbetrieb nie aufgerufen, beim Zurückschalten automatisch aus.
+Einstellbar „ohne Alarm“ (`AlarmEnabled = false`) für einen gefahrlosen ersten Test.
+Verbindungstest nur lesend. Dauerhafte Fehler (ungültiger Token, Validierung) werden nicht
+wiederholt, damit das Feuersoftware-Rate-Limit (5 Einsätze/min, 25/h) nicht aufgebraucht wird.
+Nachweis: `tests/test_feuersoftware.py` (12 Tests, simulierter Endpunkt). **Nicht** gegen den
+echten Dienst getestet: Ein Aufruf würde einen echten Einsatz anlegen.
 
 ## Phase 7 – Ausbildung und KI-Anrufer (umgesetzt)
 
@@ -182,7 +194,7 @@ Notrufe, Fahrzeugzuordnung und Statuswechsel mit den handelnden Personen
 | Sonderrechtsfaktor je Fahrzeugtyp/Straßenklasse, Ausrückzeit je Wache | spätere Erweiterung der Vorschlagsregeln |
 | Reale FMS-/TETRA-Statusanbindung und GPS-Ortung (Plugins `PositionSource`) | spätere Plugins |
 | Funkalarmierung (POCSAG/TETRA) | späteres Plugin |
-| Anbindung einer konkreten Feuerwehrsoftware (z. B. Feuersoftware Connect) | späteres Plugin, nach Schnittstellendoku und Testzugang |
+| Feuersoftware Connect: erster Echttest mit eigenem Standort-Token (Plugin fertig, nur gegen simulierten Endpunkt getestet); Fahrzeugstatus an Connect | Betreiber / spätere Erweiterung |
 | Adresssuche (Geokodierung) für den Einsatzort | Phase 8 |
 | Gemeindeschlüssel-Bereiche bei Zuständigkeit und AAO-Bereichswahl auswerten (heute nur Geometrie) | mit Adresssuche |
 | Claude-Antwortzeit mit echtem API-Schlüssel messen (M7 vollständig abnehmen) | sobald ein Schlüssel hinterlegt ist |

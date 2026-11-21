@@ -157,6 +157,16 @@ und tauscht erst nach Erfolg; der alte Stand bleibt als `ils_before_restore` erh
   geladen (`connect-src`); die Kachelquelle legt der Server fest.
 
 
+## Feuersoftware Connect (0.7.1)
+
+- Reale Schnittstelle: dieselben Kernregeln wie für jedes reale Plugin (deaktiviert angelegt,
+  nur Echtbetrieb, nur Administratoren, Moduswechsel schaltet ab, Prüfung vor jedem Aufruf).
+- Der API-Token gewährt laut Hersteller vollen Zugriff auf den Standort („wer den Token kennt,
+  kann Alarme erzeugen“): Er wird nur verschlüsselt gespeichert und nie ausgegeben.
+- Der Verbindungstest liest nur. Einsätze entstehen ausschließlich aus einer vom Disponenten
+  bestätigten Alarmierung.
+- Im Rahmen der Entwicklung wurde der echte Dienst nie aufgerufen.
+
 ## Ausbildung und KI-Anrufer (Phase 7)
 
 - **Keine echten Leitungen:** Ein Übungsanruf ist ein Datensatz (`source = training`); der

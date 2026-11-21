@@ -1,5 +1,17 @@
 # Änderungsprotokoll
 
+## 0.7.1 – 21.11.2026 – Schnittstelle Feuersoftware Connect
+
+### Hinzugefügt
+- Reale Schnittstelle „Feuersoftware Connect“: je bestätigter Alarmierung ein Einsatz in
+  Connect (Stichwort, Einsatznummer, Adresse, Koordinaten, Lage, alarmierte Fahrzeuge),
+  Abgleich über die Einsatznummer, wahlweise ohne Alarm an die Handys; Verbindungstest nur
+  lesend. Standardmäßig deaktiviert, nur im Echtbetrieb durch Administratoren aktivierbar.
+
+### Geändert
+- Dauerhafte Fehler einer Schnittstelle (z. B. ungültiger Schlüssel) werden nicht mehr
+  wiederholt.
+
 ## 0.7.0 – 21.11.2026 – Phase 7: Ausbildung und KI-Anrufer
 
 ### Hinzugefügt

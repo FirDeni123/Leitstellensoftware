@@ -252,8 +252,10 @@ class ProposalStrategy(Protocol):  def score(self, ctx: ProposalContext, vehicle
   Fahrzeuge, Wachen, RICs und den Betriebsmodus.
 - **Registrierung:** eingebaute Plugins plus Python-Pakete mit Entry-Point
   `ils_sim.plugins` (beim Start geladen; ein defektes Fremd-Plugin stoppt den Server nicht).
-- **Eingebaut:** `simulation_receiver` (Simulations-Empfänger, `is_real = false`) und
-  `webhook` (HTTPS-POST mit JSON und optionalem Token, `is_real = true`).
+- **Eingebaut:** `simulation_receiver` (Simulations-Empfänger, `is_real = false`),
+  `webhook` (HTTPS-POST mit JSON und optionalem Token, `is_real = true`) und
+  `feuersoftware_connect` (Feuersoftware Connect, öffentliche Schnittstelle, `is_real = true`,
+  siehe unten).
 - **Konfiguration:** wird gegen das JSON-Schema des Plugins geprüft (`jsonschema`); der
   Client erzeugt daraus das Formular. **Geheimnisse** werden getrennt und verschlüsselt
   gespeichert (Fernet, Schlüssel außerhalb der Datenbank), die API liefert nur `••••1234`.
@@ -269,7 +271,21 @@ class ProposalStrategy(Protocol):  def score(self, ctx: ProposalContext, vehicle
      umgeleitet und protokolliert (Test: `test_m4_real_plugin_is_never_called_in_simulation_mode`).
   5. Zeitlimit je Versuch, drei Versuche mit Wartezeit, Status `ok`/`error` und
      Ereignisprotokoll je Schnittstelle; Plugin-Fehler brechen nie die Alarmierung ab.
-- **Nicht umgesetzt:** Anbindung einer konkreten Feuerwehrsoftware (z. B. Feuersoftware
-  Connect), Funkalarmierung (POCSAG/TETRA), GPS-Feed. Sie folgen als eigene Plugins, sobald
-  Schnittstellendokumentation und ein Testzugang vorliegen.
+     Meldet ein Plugin einen dauerhaften Fehler (`retryable = false`, z. B. ungültiger
+     Schlüssel), wiederholt der Kern nicht.
+- **Feuersoftware Connect** (`app/plugins/builtin/feuersoftware.py`): je bestätigter
+  Alarmierung `POST https://connectapi.feuersoftware.com/interfaces/public/operation` mit
+  `Authorization: Bearer <API-Token des Standorts>` und `updateStrategy=ByNumber` (Einsatznummer
+  der Leitstelle; Nachalarmierungen und Wiederholungen aktualisieren denselben Einsatz).
+  Felder: `Start` (Ortszeit mit Versatz), `Status` (New/Update), `Priority` (1→High, 2→Medium,
+  3→Low), `AlarmEnabled` (einstellbar – aus = Einsatz ohne Alarm an die Handys), `Keyword`,
+  `Number`, `Address` (Straße, Hausnummer, PLZ, Ort aus der Einsatzadresse), `Position`,
+  `Facts` (Beschreibung, Ortshinweis), `Source`, `Properties` (alarmierte Fahrzeuge, Wachen,
+  RICs, Stufe); `Ric` nur, wenn konfiguriert (Connect erlaubt höchstens 5 Zeichen). Test der
+  Verbindung: nur lesend (`GET …/operation?onlyLatest=true`). Grundlage: offizielle Doku
+  „Öffentliche Connect API“ (docsv2.feuersoftware.com, gelesen 21.11.2026); die Feldnamen in
+  `Position`/`Properties` stehen dort nicht ausgeführt und folgen Community-Clients. **Gegen
+  den echten Dienst nicht getestet** – nur gegen einen simulierten Endpunkt.
+- **Nicht umgesetzt:** Funkalarmierung (POCSAG/TETRA), GPS-Feed, Fahrzeugstatus an
+  Feuersoftware (`POST /vehicle/{radioId}/status` wäre möglich).
 

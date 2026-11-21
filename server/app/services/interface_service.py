@@ -448,4 +448,8 @@ async def deliver(
         if last.ok:
             status = "sent" if plugin.meta.is_real else "simulated"
             return Delivery(status, last.detail, attempts)
-    return Delivery("failed", f"{last.detail} (nach {attempts} Versuchen)", attempts)
+        if not last.retryable:
+            break
+    return Delivery(
+        "failed", f"{last.detail} (nach {attempts} Versuch{'en' if attempts > 1 else ''})", attempts
+    )
