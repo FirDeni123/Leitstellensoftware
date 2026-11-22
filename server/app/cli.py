@@ -5,6 +5,7 @@ Commands::
     ils-admin bootstrap           Permission catalogue + default roles + first administrator
     ils-admin seed-demo           Sample control centre and users for development/training
     ils-admin reset-data          Delete all data except users, roles and settings
+    ils-admin set-mode [MODE]     Show or switch the operation mode (simulation | real)
     ils-admin create-user ...     Create a user from the shell
     ils-admin generate-key        New Fernet key for ILS_ENCRYPTION_KEYS
     ils-admin generate-jwt-secret New value for ILS_JWT_SECRET
@@ -27,10 +28,10 @@ from app.core.security import generate_initial_password, hash_password, validate
 from app.db.session import Database
 from app.demo_data import seed_master_data
 from app.models import ControlCenter, Role, User
-from app.realtime.bus import InMemoryEventBus
+from app.realtime.bus import InMemoryEventBus, create_bus
 from app.services.reference_data import ensure_reference_data
 from app.services.role_service import sync_catalogue
-from app.services.uow import UnitOfWork
+from app.services.uow import Actor, UnitOfWork
 
 DEMO_CONTROL_CENTER = {
     "code": "ILS-DEMO",
@@ -174,6 +175,52 @@ async def reset_data_command(confirm: str | None, dry_run: bool, include_audit: 
     await _with_uow(run)
 
 
+CONSOLE_ACTOR = Actor(None, "Server-Konsole (ils-admin)")
+MODE_LABEL = {"simulation": "Simulationsbetrieb", "real": "ECHTBETRIEB"}
+
+
+async def change_mode(uow: UnitOfWork, mode: str | None, reason: str | None, confirm: str | None) -> str:
+    """Show (mode None) or switch the operation mode – same rules and effects as in the API."""
+    from app.models import OperationMode
+    from app.services.system_service import REAL_MODE_CONFIRMATION, SystemService
+
+    service = SystemService(uow)
+    current = await service.mode_setting()
+    if mode is None:
+        return f"Aktueller Betriebsmodus: {MODE_LABEL.get(current.value, current.value)}"
+    target = OperationMode(mode)
+    if target.value == current.value:
+        return f"Bereits im {MODE_LABEL[target.value]} – nichts geändert"
+    if not reason or len(reason.strip()) < 5:
+        raise SystemExit('Bitte eine Begründung angeben (mind. 5 Zeichen): --reason "…"')
+    if target == OperationMode.REAL and confirm != REAL_MODE_CONFIRMATION:
+        raise SystemExit(
+            "Wechsel in den ECHTBETRIEB: Reale Schnittstellen können danach eingeschaltet werden und "
+            "übertragen jede bestätigte Alarmierung; Übungen, simulierte Notrufe und Fahrten werden "
+            f"beendet.\nZur Bestätigung zusätzlich: --confirm {REAL_MODE_CONFIRMATION}"
+        )
+    await service.set_operation_mode(target, reason.strip(), confirm or "", current.version)
+    after = await service.mode_setting()
+    note = (
+        "Reale Schnittstellen sind weiterhin aus – einschalten im Fenster „Schnittstellen“."
+        if target == OperationMode.REAL
+        else "Alle realen Schnittstellen wurden automatisch ausgeschaltet."
+    )
+    return f"Betriebsmodus jetzt: {MODE_LABEL[after.value]}. {note}"
+
+
+async def set_mode_command(mode: str | None, reason: str | None, confirm: str | None) -> None:
+    settings = get_settings()
+    db = Database(settings)
+    bus = create_bus(settings.redis_url)  # with Redis every connected client sees the change live
+    try:
+        async with db.sessionmaker() as session:
+            print(await change_mode(UnitOfWork(session, bus, CONSOLE_ACTOR), mode, reason, confirm))
+    finally:
+        await bus.stop()
+        await db.dispose()
+
+
 async def create_user(username: str, display_name: str, role: str, password: str | None) -> None:
     async def run(uow: UnitOfWork) -> None:
         s = uow.session
@@ -215,6 +262,10 @@ def main(argv: list[str] | None = None) -> None:
     r.add_argument("--confirm", help="Bestätigungswort ALLES-LOESCHEN")
     r.add_argument("--dry-run", action="store_true", help="nur anzeigen, was gelöscht würde")
     r.add_argument("--include-audit-log", action="store_true", help="auch das Änderungsprotokoll leeren")
+    m = sub.add_parser("set-mode", help="Betriebsmodus anzeigen oder umschalten (simulation | real)")
+    m.add_argument("mode", nargs="?", choices=["simulation", "real"])
+    m.add_argument("--reason", help="Begründung (wird protokolliert)")
+    m.add_argument("--confirm", help="beim Wechsel in den Echtbetrieb: ECHTBETRIEB")
     c = sub.add_parser("create-user", help="Benutzer anlegen")
     c.add_argument("username")
     c.add_argument("display_name")
@@ -247,6 +298,8 @@ def _dispatch(args: argparse.Namespace) -> None:
         asyncio.run(seed_demo(args.password))
     elif args.cmd == "reset-data":
         asyncio.run(reset_data_command(args.confirm, args.dry_run, args.include_audit_log))
+    elif args.cmd == "set-mode":
+        asyncio.run(set_mode_command(args.mode, args.reason, args.confirm))
     elif args.cmd == "create-user":
         asyncio.run(create_user(args.username, args.display_name, args.role, args.password))
 

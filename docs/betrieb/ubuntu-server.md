@@ -83,6 +83,22 @@ Karte immer angezeigt.
 > worden (kein Docker). Die OSRM-Anbindung des Servers ist gegen einen simulierten Endpunkt
 > getestet.
 
+## Betriebsmodus umschalten (Simulation ↔ Echtbetrieb)
+
+Direkt auf dem Server (Protokolleintrag „Server-Konsole (ils-admin)“ mit Begründung; alle
+angemeldeten Clients sehen den Wechsel sofort):
+
+```bash
+cd /opt/ils-sim/deploy
+sudo docker compose exec api ils-admin set-mode
+sudo docker compose exec api ils-admin set-mode real --reason "Begründung" --confirm ECHTBETRIEB
+sudo docker compose exec api ils-admin set-mode simulation --reason "Begründung"
+```
+
+Im Echtbetrieb bleiben reale Schnittstellen zunächst aus (einschalten im Fenster
+„Schnittstellen“); Übungen, simulierte Notrufe und Fahrten werden beendet. Beim Wechsel in die
+Simulation werden alle realen Schnittstellen automatisch ausgeschaltet.
+
 ## Daten zurücksetzen (Benutzer behalten)
 
 Löscht alle Daten außer Benutzern (mit Rollen, Rechten, Layouts, Anmeldeprotokoll),

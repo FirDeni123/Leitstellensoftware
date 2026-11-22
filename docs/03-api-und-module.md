@@ -45,7 +45,7 @@
 | POST/PATCH/DELETE | `/roles…` | `roles.write` | Rollen verwalten |
 | GET/POST/PATCH/DELETE | `/control-centers…` | `control_centers.read/write` (Löschen: + `system.admin`) | Leitstellen |
 | GET | `/system/info` | angemeldet | Version, Betriebsmodus, Modulstatus |
-| GET/PUT | `/system/operation-mode` | PUT: `system.mode.change` | Simulation ↔ Echtbetrieb (Bestätigung „ECHTBETRIEB“) |
+| GET/PUT | `/system/operation-mode` | PUT: `system.mode.change` | Simulation ↔ Echtbetrieb (Bestätigung „ECHTBETRIEB“); auf dem Server auch `ils-admin set-mode` |
 | GET | `/audit` | `audit.read` | Änderungsprotokoll |
 | GET/PUT/DELETE | `/me/layouts/{workstation}` | angemeldet | Fensterlayout |
 | WS | `/ws` | Token in erster Nachricht | Echtzeit |

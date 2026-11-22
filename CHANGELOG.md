@@ -3,6 +3,8 @@
 ## 0.7.1 – 21.11.2026 – Schnittstelle Feuersoftware Connect
 
 ### Hinzugefügt
+- `ils-admin set-mode`: Betriebsmodus auf dem Server anzeigen und umschalten (Begründung,
+  Bestätigung „ECHTBETRIEB“, Protokoll, Live-Aktualisierung aller Clients über Redis).
 - `ils-admin reset-data`: löscht alle Daten außer Benutzern, Rollen und Einstellungen (mit
   Probelauf, Bestätigungswort, Protokolleintrag; im Echtbetrieb gesperrt); Grundkataloge
   werden neu angelegt. `seed-demo` ordnet vorhandene Demo-Benutzer wieder der Demo-Leitstelle zu.
