@@ -83,6 +83,25 @@ Karte immer angezeigt.
 > worden (kein Docker). Die OSRM-Anbindung des Servers ist gegen einen simulierten Endpunkt
 > getestet.
 
+## Daten zurücksetzen (Benutzer behalten)
+
+Löscht alle Daten außer Benutzern (mit Rollen, Rechten, Layouts, Anmeldeprotokoll),
+Systemeinstellungen (Betriebsmodus, KI-Einstellungen) und dem Änderungsprotokoll: Leitstellen,
+Wachen, Fahrzeuge, AAO, Schnittstellen, Einsätze, Notrufe, Alarmierungen, Übungen, Importe.
+Grundkataloge (Organisationen, Fahrzeugtypen, Status, Stichworte) werden mit den
+Standardwerten neu angelegt. Nur im Simulationsbetrieb; Benutzer verlieren ihre
+Leitstellen-Zuordnung.
+
+```bash
+cd /opt/ils-sim/deploy && sudo ./scripts/backup.sh
+sudo docker compose exec api ils-admin reset-data --dry-run
+sudo docker compose exec api ils-admin reset-data --confirm ALLES-LOESCHEN
+sudo docker compose restart api
+```
+
+Mit `--include-audit-log` wird auch das Änderungsprotokoll geleert (der Reset selbst wird
+danach als erster Eintrag protokolliert).
+
 ## Schnittstelle Feuersoftware Connect
 
 Legt je bestätigter Alarmierung einen Einsatz in Feuersoftware Connect an. Voraussetzungen:

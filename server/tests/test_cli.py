@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from app import cli
+from tests.test_operations import setup  # noqa: F401 – shared fixture
 
 
 def test_seed_demo_refused_in_production_without_flag(monkeypatch):
@@ -20,3 +21,62 @@ def test_seed_demo_refused_in_production_without_flag(monkeypatch):
     assert calls == []
     cli.main(["seed-demo", "--allow-production", "--password", "Test-Pass-2026!"])
     assert calls == ["Test-Pass-2026!"]
+
+
+async def test_reset_data_keeps_users_and_empties_everything_else(client, setup, db):  # noqa: F811
+    from sqlalchemy import func, select, text
+
+    from app.core.errors import ConflictError
+    from app.models import AuditLog, Keyword, Role, User
+    from app.realtime.bus import InMemoryEventBus
+    from app.services.data_reset import reset_data, tables_to_empty
+    from app.services.uow import UnitOfWork
+
+    c = setup
+    r = await client.post(
+        "/incidents",
+        headers=c["dispo"],
+        json={
+            "control_center_id": c["cc"]["id"],
+            "keyword_id": c["keywords"]["B2"]["id"],
+            "address": "Weg 1",
+        },
+    )
+    assert r.status_code == 201, r.text
+    users_before = len((await client.get("/users", headers=c["admin"])).json()["items"])
+
+    async with db.sessionmaker() as s:
+        before = await reset_data(UnitOfWork(s, InMemoryEventBus()), dry_run=True)
+    assert before["tables"]["incidents"] == 1 and before["tables"]["control_centers"] == 2
+    assert "audit_log" not in before["tables"] and "users" not in before["tables"]
+    assert "audit_log" in tables_to_empty(include_audit=True)
+
+    async with db.sessionmaker() as s:
+        result = await reset_data(UnitOfWork(s, InMemoryEventBus()))
+    assert result["rows"] >= 2 and result["users_kept"] == users_before
+    async with db.sessionmaker() as s:
+        for table in tables_to_empty(include_audit=False):
+            if table in ("keywords", "organizations", "vehicle_types", "vehicle_status_definitions"):
+                continue  # recreated with defaults
+            count = (await s.execute(text(f'SELECT count(*) FROM "{table}"'))).scalar_one()  # noqa: S608
+            assert count == 0, table
+        assert await s.scalar(select(func.count()).select_from(User)) == users_before
+        assert await s.scalar(select(func.count()).select_from(Role)) >= 5
+        assert await s.scalar(select(func.count()).select_from(Keyword)) > 10  # catalogue recreated
+        summaries = (await s.scalars(select(AuditLog.summary).where(AuditLog.action == "reset"))).all()
+        assert summaries and "Benutzer" in summaries[0]
+    # users can still log in
+    assert (await client.get("/auth/me", headers=c["dispo"])).status_code == 200
+
+    # never in real operation
+    async with db.sessionmaker() as s:
+        await s.execute(text("UPDATE system_settings SET value = '\"real\"' WHERE key = 'operation_mode'"))
+        await s.commit()
+    async with db.sessionmaker() as s:
+        with pytest.raises(ConflictError):
+            await reset_data(UnitOfWork(s, InMemoryEventBus()))
+
+
+def test_reset_data_requires_confirmation(monkeypatch):
+    with pytest.raises(SystemExit, match="ALLES-LOESCHEN"):
+        cli.main(["reset-data"])

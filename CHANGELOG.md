@@ -3,6 +3,9 @@
 ## 0.7.1 – 21.11.2026 – Schnittstelle Feuersoftware Connect
 
 ### Hinzugefügt
+- `ils-admin reset-data`: löscht alle Daten außer Benutzern, Rollen und Einstellungen (mit
+  Probelauf, Bestätigungswort, Protokolleintrag; im Echtbetrieb gesperrt); Grundkataloge
+  werden neu angelegt. `seed-demo` ordnet vorhandene Demo-Benutzer wieder der Demo-Leitstelle zu.
 - Reale Schnittstelle „Feuersoftware Connect“: je bestätigter Alarmierung ein Einsatz in
   Connect (Stichwort, Einsatznummer, Adresse, Koordinaten, Lage, alarmierte Fahrzeuge),
   Abgleich über die Einsatznummer, wahlweise ohne Alarm an die Handys; Verbindungstest nur

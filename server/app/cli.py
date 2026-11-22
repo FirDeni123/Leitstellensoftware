@@ -4,6 +4,7 @@ Commands::
 
     ils-admin bootstrap           Permission catalogue + default roles + first administrator
     ils-admin seed-demo           Sample control centre and users for development/training
+    ils-admin reset-data          Delete all data except users, roles and settings
     ils-admin create-user ...     Create a user from the shell
     ils-admin generate-key        New Fernet key for ILS_ENCRYPTION_KEYS
     ils-admin generate-jwt-secret New value for ILS_JWT_SECRET
@@ -117,7 +118,10 @@ async def seed_demo(password: str) -> None:
         if not roles:
             raise SystemExit("Bitte zuerst 'ils-admin bootstrap' ausführen")
         for username, name, role_key in DEMO_USERS:
-            if await s.scalar(select(User).where(User.username == username)):
+            existing = await s.scalar(select(User).where(User.username == username))
+            if existing is not None:
+                if cc not in existing.control_centers:  # e.g. after reset-data
+                    existing.control_centers = [*existing.control_centers, cc]
                 continue
             user = User(
                 username=username,
@@ -138,6 +142,34 @@ async def seed_demo(password: str) -> None:
             if cc not in admin.control_centers:
                 admin.control_centers = [*admin.control_centers, cc]
         await uow.commit()
+
+    await _with_uow(run)
+
+
+async def reset_data_command(confirm: str | None, dry_run: bool, include_audit: bool) -> None:
+    from app.services.data_reset import CONFIRMATION, reset_data
+
+    if not dry_run and confirm != CONFIRMATION:
+        raise SystemExit(
+            "Löscht alle Daten außer Benutzern, Rollen und Einstellungen – unwiderruflich.\n"
+            "Erst ansehen:  ils-admin reset-data --dry-run\n"
+            f"Ausführen:     ils-admin reset-data --confirm {CONFIRMATION}\n"
+            "Vorher eine Sicherung anlegen (deploy/scripts/backup.sh)."
+        )
+
+    async def run(uow: UnitOfWork) -> None:
+        result = await reset_data(uow, include_audit=include_audit, dry_run=dry_run)
+        filled = {k: v for k, v in result["tables"].items() if v}
+        print(("Würde löschen" if dry_run else "Gelöscht") + f": {result['rows']} Datensätze")
+        for table, count in sorted(filled.items(), key=lambda kv: -kv[1]):
+            print(f"  {table:<28} {count:>8}")
+        print(
+            f"Behalten: {result['users_kept']} Benutzer mit Rollen, Rechten und Layouts, Systemeinstellungen"
+            + ("" if include_audit else ", Änderungsprotokoll")
+        )
+        if not dry_run:
+            print(f"Grundkataloge neu angelegt: {result['reference_data']}")
+            print("Bitte die API neu starten: docker compose restart api")
 
     await _with_uow(run)
 
@@ -179,6 +211,10 @@ def main(argv: list[str] | None = None) -> None:
         action="store_true",
         help="auch bei ILS_ENVIRONMENT=production (nur reine Test- und Schulungsserver)",
     )
+    r = sub.add_parser("reset-data", help="Alle Daten außer Benutzern, Rollen und Einstellungen löschen")
+    r.add_argument("--confirm", help="Bestätigungswort ALLES-LOESCHEN")
+    r.add_argument("--dry-run", action="store_true", help="nur anzeigen, was gelöscht würde")
+    r.add_argument("--include-audit-log", action="store_true", help="auch das Änderungsprotokoll leeren")
     c = sub.add_parser("create-user", help="Benutzer anlegen")
     c.add_argument("username")
     c.add_argument("display_name")
@@ -209,6 +245,8 @@ def _dispatch(args: argparse.Namespace) -> None:
         if get_settings().is_production:
             print("WARNUNG: Demodaten werden auf einem Server im Produktionsmodus angelegt.")
         asyncio.run(seed_demo(args.password))
+    elif args.cmd == "reset-data":
+        asyncio.run(reset_data_command(args.confirm, args.dry_run, args.include_audit_log))
     elif args.cmd == "create-user":
         asyncio.run(create_user(args.username, args.display_name, args.role, args.password))
 
